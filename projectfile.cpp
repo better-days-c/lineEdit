@@ -64,6 +64,11 @@ bool ProjectFile::hasDataFile(const QString& filePath) const
     return dataFiles.contains(filePath);
 }
 
+bool ProjectFile::hasDesignFile(const QString &filePath) const
+{
+    return designFiles.contains(filePath);
+}
+
 void ProjectFile::setCommonSetting(const QString& key, const QJsonValue& value)
 {
     commonSettings[key] = value;
@@ -88,6 +93,7 @@ bool ProjectFile::validateProject() const
             return false;
         }
     }
+
     return true;
 }
 
@@ -107,6 +113,8 @@ QJsonObject ProjectFile::toJson() const
 
     json["commonSettings"] = commonSettings;
 
+    json["designLines"] = designObj;
+
     return json;
 }
 
@@ -123,5 +131,16 @@ void ProjectFile::fromJson(const QJsonObject& json)
         dataFiles.append(value.toString());
     }
 
+    designFiles.clear();
+    if (json.contains("designLines") && json["designLines"].isObject()) {
+        QJsonObject designLines = json["designLines"].toObject();
+        designObj = designLines;
+
+        if (designLines.contains("fileName") && designLines["fileName"].isString()) {
+            QString fileName = designLines["fileName"].toString();
+            designFiles.append(fileName);
+        }
+    }
+    qDebug() << designFiles;
     commonSettings = json["commonSettings"].toObject();
 }

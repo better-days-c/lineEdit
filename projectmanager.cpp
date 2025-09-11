@@ -2,6 +2,8 @@
 #include <QWidget>
 #include <QDir>
 #include <QInputDialog>
+#include <QDebug>
+#include <QMessageBox>
 
 ProjectManager::ProjectManager(QWidget* parent)
     : QObject(parent)
@@ -178,6 +180,50 @@ void ProjectManager::removeDataFile(const QString& filePath)
     m_currentProject->removeDataFile(relativePath);
 
     markModified();
+}
+
+void ProjectManager::loadDesignTxt(const QString &filePath)
+{
+    QFile file(filePath);
+    QString fileName = QFileInfo(filePath).fileName();
+
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(nullptr, tr("导入失败"),
+                                         tr("无法打开文件：[%1]").arg(fileName));
+        qWarning() << "Cannot open file:" << filePath;
+        return;
+    }
+
+    if (m_currentProject->hasDesignFile(fileName)){
+
+        QMessageBox::warning(nullptr, tr("重复导入"),
+                                         tr("设计线文件 [%1] 已经导入过了！").arg(fileName));
+        return;
+    }
+
+    QTextStream in(&file);
+    QString header = in.readLine(); // 跳过表头
+
+    QJsonArray dataArray;
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (line.isEmpty()) continue;
+
+        QStringList parts = line.split('\t');
+        if (parts.size() < 5) continue;
+
+        QJsonObject obj;
+        obj["Line"] = parts[0];
+        obj["X"] = parts[1].toDouble();
+        obj["Y"] = parts[2].toDouble();
+        obj["Point"] = parts[3].toInt();
+        dataArray.append(obj);
+    }
+
+    QJsonObject designObj;
+    designObj["fileName"] = fileName;
+    designObj["data"] = dataArray;
+    m_currentProject->designObj = designObj;
 }
 
 void ProjectManager::markModified()

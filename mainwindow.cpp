@@ -75,6 +75,7 @@ void MainWindow::setupMenuBar()
     m_openDesignAction = new QAction("打开设计测线文件(&O)...", this);
     m_openAction->setStatusTip("打开TXT文件");
     ///待完善！后期加入的设计线文件
+    connect(m_openDesignAction, &QAction::triggered, this, &MainWindow::openDesignFile);
     fileMenu->addAction(m_openDesignAction);
 
     fileMenu->addSeparator();
@@ -216,6 +217,21 @@ void MainWindow::openFile()
             QMessageBox::warning(this, "错误", "无法加载文件: " + fileName);
         }
     }
+}
+
+void MainWindow::openDesignFile()
+{
+    QString fileName = QFileDialog::getOpenFileName(
+        this,
+        "打开TXT文件",
+        "",
+        "TXT文件 (*.txt);;所有文件 (*)"
+    );
+
+    if (fileName.isEmpty())
+        return;
+
+    m_projectManager->loadDesignTxt(fileName);
 }
 
 

@@ -8,13 +8,6 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 
-struct DesignPoint {
-    QString line;
-    double x;
-    double y;
-    int point;
-};
-
 class ProjectFile
 {
 public:
@@ -30,6 +23,12 @@ public:
     // 数据文件列表
     QStringList dataFiles;
 
+    // 设计线文件(json存储
+    QJsonObject designObj;
+
+    // 设计线列表
+    QStringList designFiles;
+
     // 共有信息
     QJsonObject commonSettings;
 
@@ -41,6 +40,7 @@ public:
     void addDataFile(const QString& filePath);
     void removeDataFile(const QString& filePath);
     bool hasDataFile(const QString& filePath) const;
+    bool hasDesignFile(const QString& filePath) const;
 
     // 共有信息管理
     void setCommonSetting(const QString& key, const QJsonValue& value);

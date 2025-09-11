@@ -35,6 +35,7 @@ public:
 
 private slots:
     void openFile();
+    void openDesignFile();
 //    void exportData();
     void closeCurrentTab();
     void onTabChanged(int index);

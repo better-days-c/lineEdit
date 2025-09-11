@@ -6,6 +6,13 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
+struct DesignPoint {
+    QString line;
+    double x;
+    double y;
+    int point;
+};
+
 class QWidget;
 
 class ProjectManager : public QObject
@@ -34,6 +41,8 @@ public:
     QStringList getAbsoluteDataFilePaths() const;
     void addDataFile(const QString& filePath);
     void removeDataFile(const QString& filePath);
+
+    void loadDesignTxt(const QString &filePath);
 
 signals:
     void projectLoaded(const QStringList& dataFiles);
