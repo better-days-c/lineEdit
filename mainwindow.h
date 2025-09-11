@@ -21,6 +21,7 @@
 #include "datastructures.h"
 #include "dattablemodel.h"
 #include "plotwidget.h"
+#include "projectmanager.h"
 
 class DatFileTab;
 
@@ -34,15 +35,19 @@ public:
 
 private slots:
     void openFile();
-    void openDesignFile();
 //    void exportData();
     void closeCurrentTab();
     void onTabChanged(int index);
 //    void saveCurrentFile();
     void exportCurrentFile();
 //    void about();
+    void onProjectModified();
+    void onProjectLoaded(const QStringList& dataFiles);
+    void onProjectClosed();
 
 private:
+    ProjectManager* m_projectManager;
+
     QTableView *m_tableView;
     QTabWidget *m_tabWidget;
     QStatusBar *m_statusBar;
@@ -73,6 +78,8 @@ private:
     DatFileTab* getCurrentTab() const;
 
     DatFileData* loadDatFileWithDialog(const QString &fileName, const PreviewDialog &dialog);
+
+    DatFileData* loadDesignData(const QString &fileName);
 };
 
 // 单个DAT文件的标签页

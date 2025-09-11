@@ -13,6 +13,14 @@ MainWindow::MainWindow(QWidget *parent)
     , m_progressBar(nullptr)
     , m_statusLabel(nullptr)
 {
+    m_projectManager = new ProjectManager(this);
+    connect(m_projectManager, &ProjectManager::projectLoaded,
+            this, &MainWindow::onProjectLoaded);
+    connect(m_projectManager, &ProjectManager::projectClosed,
+            this, &MainWindow::onProjectClosed);
+    connect(m_projectManager, &ProjectManager::projectModified,
+            this, &MainWindow::onProjectModified);
+
     setupUI();
     setupMenuBar();
     setupToolBar();
@@ -43,6 +51,18 @@ void MainWindow::setupMenuBar()
 {
     QMenuBar *menuBar = this->menuBar();
 
+    //项目菜单
+    QMenu *projectMenu = menuBar->addMenu("项目");
+
+    projectMenu->addAction("新建项目", m_projectManager, &ProjectManager::newProject);
+    projectMenu->addAction("打开项目", m_projectManager, &ProjectManager::openProject);
+    projectMenu->addSeparator();
+    projectMenu->addAction("保存项目", m_projectManager, &ProjectManager::saveProject);
+    projectMenu->addAction("另存为", m_projectManager, &ProjectManager::saveProjectAs);
+    projectMenu->addSeparator();
+    projectMenu->addAction("关闭项目", m_projectManager, &ProjectManager::closeProject);
+
+
     // 文件菜单
     QMenu *fileMenu = menuBar->addMenu("文件(&F)");
 
@@ -52,9 +72,9 @@ void MainWindow::setupMenuBar()
     connect(m_openAction, &QAction::triggered, this, &MainWindow::openFile);
     fileMenu->addAction(m_openAction);
 
-    m_openAction = new QAction("打开设计测线文件(&O)...", this);
+    m_openDesignAction = new QAction("打开设计测线文件(&O)...", this);
     m_openAction->setStatusTip("打开TXT文件");
-    connect(m_openDesignAction, &QAction::triggered, this, &MainWindow::openDesignFile);
+    ///待完善！后期加入的设计线文件
     fileMenu->addAction(m_openDesignAction);
 
     fileMenu->addSeparator();
@@ -106,7 +126,7 @@ void MainWindow::setupToolBar()
     QToolBar *mainToolBar = addToolBar("主工具栏");
 
     mainToolBar->addAction(m_openAction);
-    mainToolBar->addAction(m_openDesignAction);
+//    mainToolBar->addAction(m_openDesignAction);
     mainToolBar->addAction(m_saveAction);
     mainToolBar->addSeparator();
     mainToolBar->addAction(m_zoomToFitAction);
@@ -198,55 +218,6 @@ void MainWindow::openFile()
     }
 }
 
-void MainWindow::openDesignFile()
-{
-    QString fileName = QFileDialog::getOpenFileName(
-        this,
-        "打开TXT文件",
-        "",
-        "TXT文件 (*.txt);;所有文件 (*)"
-    );
-
-    if (fileName.isEmpty())
-        return;
-
-    m_statusLabel->setText("正在加载文件...");
-    m_progressBar->show();
-    m_progressBar->setRange(0, 0); // 不确定进度
-
-    QApplication::processEvents(); // 更新UI
-
-    DatFileData *data = loadDatFileWithDialog(fileName, previewDialog);
-
-        m_progressBar->hide();
-
-        if (data) {
-            QFileInfo fileInfo(fileName);
-            DatFileTab *tab = new DatFileTab(data, fileInfo.baseName(), this);
-
-            //应用列映射配置到表格模型
-            ColumnMapping mapping = previewDialog.getColumnMapping();
-            tab->applyColumnMapping(mapping);
-
-            int index = m_tabWidget->addTab(tab, fileInfo.baseName());
-            m_tabWidget->setCurrentIndex(index);
-
-            m_statusLabel->setText(QString("已加载文件: %1 (%2 个点)")
-                                  .arg(fileInfo.baseName())
-                                  .arg(data->points.size()));
-
-            // 启用相关动作
-            m_saveAction->setEnabled(true);
-            m_exportAction->setEnabled(true);
-            m_closeAction->setEnabled(true);
-            m_zoomToFitAction->setEnabled(true);
-            m_clearSelectionAction->setEnabled(true);
-        } else {
-            m_statusLabel->setText("文件加载失败");
-            QMessageBox::warning(this, "错误", "无法加载文件: " + fileName);
-        }
-    }
-}
 
 DatFileData* MainWindow::loadDatFileWithDialog(const QString &fileName, const PreviewDialog &dialog)
 {
@@ -313,6 +284,71 @@ DatFileData* MainWindow::loadDatFileWithDialog(const QString &fileName, const Pr
     }
     return data;
 }
+
+//DatFileData *MainWindow::loadDesignData(const QString &fileName)
+//{
+//    QFile file(fileName);
+//    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)){
+//        return nullptr;
+//    }
+
+//    DatFileData *data = new DatFileData();
+//    data->fileName = QFileInfo(fileName).baseName();
+
+//    QTextStream in(&file);
+//    QString line;
+//    int lineCount = 0;
+
+
+//    // 跳过指定的行数
+//    while (!in.atEnd() && lineCount < skipLines) {
+//        in.readLine();
+//        lineCount++;
+//    }
+
+//    // 跳过表头行
+//    if (!in.atEnd()) {
+//        in.readLine();
+//        lineCount++;
+//    }
+
+//    while (!in.atEnd()){
+//        line = in.readLine();
+//        lineCount++;
+//        //解析数据行
+//        QStringList parts = line.split(QRegExp("\\s+"), QString::SkipEmptyParts);
+//        if (parts.size() <= qMax(qMax(qMax(qMax(mapping.lineIdColumn, mapping.fnColumn),
+//                                 mapping.xCoordinateColumn), mapping.yCoordinateColumn),
+//                                 mapping.offsetColumn)) continue;
+
+//        bool ok;
+//        QString lineId = parts[mapping.lineIdColumn];
+
+//        int fn = parts[mapping.fnColumn].toInt(&ok);
+//        if (!ok) continue;
+
+//        double x = parts[mapping.xCoordinateColumn].toDouble(&ok);
+//        if (!ok) continue;
+
+//        double y = parts[mapping.yCoordinateColumn].toDouble(&ok);
+//        if (!ok) continue;
+
+//        double quality = parts[mapping.offsetColumn].toDouble(&ok);
+//        if (!ok) continue;
+
+//        DataPoint point(lineId, fn, x, y, quality);
+//        data->addPoint(point);
+
+//    }
+
+//    file.close();
+
+//    if (data->points.isEmpty()){
+//        delete data;
+//        return nullptr;
+//    }
+//    return data;
+//}
 
 void MainWindow::closeCurrentTab()
 {
@@ -698,4 +734,40 @@ void DatFileTab::applyColumnMapping(const ColumnMapping &mapping)
     updateStatusInfo();
 }
 
+
+void MainWindow::onProjectLoaded(const QStringList& dataFiles)
+{
+    // 打开所有数据文件
+//    for (const QString& filePath : dataFiles) {
+//        openDataFile(filePath);
+//    }
+
+    // 更新窗口标题
+    if (m_projectManager->hasProject()) {
+        setWindowTitle(QString("%1 - 我的应用程序")
+                      .arg(m_projectManager->currentProject()->projectName));
+    }
+
+    // 加载共有设置
+    if (m_projectManager->currentProject()) {
+        auto settings = m_projectManager->currentProject()->commonSettings;
+        // 应用设置...
+    }
+}
+
+void MainWindow::onProjectClosed()
+{
+    /// 关闭所有数据文件
+    closeCurrentTab();
+    setWindowTitle("我的应用程序");
+}
+
+void MainWindow::onProjectModified()
+{
+    // 在标题栏显示修改标记
+    if (m_projectManager->hasProject()) {
+        setWindowTitle(QString("%1* - 我的应用程序")
+                      .arg(m_projectManager->currentProject()->projectName));
+    }
+}
 //#include "mainwindow.moc"

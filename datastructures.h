@@ -20,11 +20,22 @@ struct DataPoint {
         : lineId(line), fn(point), coordinate(x, y), offset(ofst), isVisible(true) {}
 };
 
+struct DesignLine {
+    QString lineId; //线号
+    QPointF startCoordinate; //起始坐标
+    QPointF endCoordinate;  //结束坐标
+    bool isVisible; //是否在视图中可见
+
+    DesignLine(const QString& line, double startX, double startY, double endX, double endY)
+        : lineId(line), startCoordinate(startX, startY), endCoordinate(endX, endY), isVisible(true) {}
+};
+
 //线段结构
 struct LineSegment {
     QVector<int> pointIndices;  // 引用原始数据点的索引
     QString lineId;             // 线号
     bool hasLowOffset;          // 是否包含低偏航点
+
 
     LineSegment() : hasLowOffset(true) {}
 };

@@ -15,6 +15,8 @@ SOURCES += \
     mainwindow.cpp \
     plotwidget.cpp \
     previewdialog.cpp \
+    projectfile.cpp \
+    projectmanager.cpp \
     tablemodel.cpp
 
 HEADERS += \
@@ -23,6 +25,8 @@ HEADERS += \
     mainwindow.h \
     plotwidget.h \
     previewdialog.h \
+    projectfile.h \
+    projectmanager.h \
     tablemodel.h
 
 FORMS += \
