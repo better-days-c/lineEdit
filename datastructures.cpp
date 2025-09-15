@@ -1,7 +1,7 @@
 #include "datastructures.h"
 #include <QDebug>
 
-QVector<LineSegment> DatFileData::getVisibleLineSegments() const
+QVector<LineSegment> DataPointData::getVisibleLineSegments() const
 {
     QVector<LineSegment> segments;
 
@@ -30,13 +30,13 @@ QVector<LineSegment> DatFileData::getVisibleLineSegments() const
             int idx = visibleIndices[i];
             const DataPoint &point = points[idx];
 
-            bool isHighQuality = (point.offset >= offsetThreshold);
+            bool isHighQuality = (point.alt >= lowAltThreshold && point.alt <= highAltThreshold);
 
             // 如果质量状态改变或者是第一个点，开始新的段
             if (currentSegment.pointIndices.isEmpty()) {
-                currentSegment.hasLowOffset = isHighQuality;
+                currentSegment.hasNormalAlt = isHighQuality;
                 currentSegment.pointIndices.append(idx);
-            } else if (currentSegment.hasLowOffset != isHighQuality) {
+            } else if (currentSegment.hasNormalAlt != isHighQuality) {
                 // 质量状态改变，结束当前段并开始新段
                 if (currentSegment.pointIndices.size() >= 2) {
                     segments.append(currentSegment);
@@ -45,7 +45,7 @@ QVector<LineSegment> DatFileData::getVisibleLineSegments() const
                 // 开始新段，但要包含前一个点以保持连续性
                 currentSegment = LineSegment();
                 currentSegment.lineId = lineNumber;
-                currentSegment.hasLowOffset = isHighQuality;
+                currentSegment.hasNormalAlt = isHighQuality;
                 if (i > 0) {
                     currentSegment.pointIndices.append(visibleIndices[i-1]);
                 }
@@ -65,16 +65,16 @@ QVector<LineSegment> DatFileData::getVisibleLineSegments() const
     return segments;
 }
 
-void DatFileData::hideByOffset(double threshold)
-{
-    for (DataPoint &point : points) {
-        if (point.offset < threshold) {
-            point.isVisible = false;
-        }
-    }
-}
+//void BatchData::hideByOffset(double threshold)
+//{
+//    for (DataPoint &point : points) {
+//        if (point.alt < threshold) {
+//            point.isVisible = false;
+//        }
+//    }
+//}
 
-void DatFileData::hideByRegion(const QPolygonF &region, bool invert)
+void DataPointData::hideByRegion(const QPolygonF &region, bool invert)
 {
     for (DataPoint &point : points) {
         bool inRegion = region.containsPoint(point.coordinate, Qt::OddEvenFill);
@@ -92,7 +92,7 @@ void DatFileData::hideByRegion(const QPolygonF &region, bool invert)
     }
 }
 
-void DatFileData::regenerateLineNumbers()
+void DataPointData::regenerateLineNumbers()
 {
     // 清空原有的线映射
     lineMap.clear();
@@ -163,4 +163,17 @@ void DatFileData::regenerateLineNumbers()
             }
         }
     }
+}
+
+///待写
+QString DataPointData::matchLineNumber(int fn, const QJsonObject& designObj)
+{
+    //如果batchObj(this)->MatchedLines不为空，则说明之前执行过匹配，需要进行清除操作
+    //清除操作：先获取fn对应的线号s，遍历每个designObj: designObj->data->LineObj:{ if Line==l(前三位相同） MatchTimes--}
+    //清除操作：batchObj(this)->MatchedLines清空
+
+    //计算与该点最近的线号
+
+    //为designObj: designObj->data->LineObj的MatchTimes++; batchObj(this)->MatchedLines append该线号string
+    return "";
 }

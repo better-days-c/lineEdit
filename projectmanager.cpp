@@ -3,7 +3,7 @@
 #include <QDir>
 #include <QInputDialog>
 #include <QDebug>
-#include <QMessageBox>
+//#include <QMessageBox>
 
 ProjectManager::ProjectManager(QWidget* parent)
     : QObject(parent)
@@ -31,13 +31,13 @@ bool ProjectManager::newProject()
 
     closeProject();
 
-    m_currentProject = new ProjectFile();
+    m_currentProject = new ProjectModel();
     m_currentProject->projectName = projectName;
     m_currentProject->projectPath = projectDir;
-
     m_currentProjectFile = QDir(projectDir).filePath(projectName + ".qproj");
     m_isModified = true;
 
+    emit projectNewed();
     return true;
 }
 
@@ -47,26 +47,26 @@ bool ProjectManager::openProject()
         return false;
     }
 
-    QString fileName = QFileDialog::getOpenFileName(
+    QString filePath = QFileDialog::getOpenFileName(
         m_parent,
         "打开项目",
         QString(),
         getProjectFilter()
     );
 
-    if (fileName.isEmpty()) {
+    if (filePath.isEmpty()) {
         return false;
     }
 
     closeProject();
 
-    m_currentProject = new ProjectFile();
-    if (m_currentProject->loadProject(fileName)) {
-        m_currentProjectFile = fileName;
+    m_currentProject = new ProjectModel();
+    if (m_currentProject->loadProject(filePath)) {
+        m_currentProjectFile = filePath;
         m_isModified = false;
 
         // 发射信号，通知主窗口打开数据文件
-        emit projectLoaded(getAbsoluteDataFilePaths());
+        emit projectLoaded();
         return true;
     } else {
         delete m_currentProject;
@@ -123,116 +123,118 @@ void ProjectManager::closeProject()
         m_currentProject = nullptr;
         m_currentProjectFile.clear();
         m_isModified = false;
+        m_currentProject = new ProjectModel(this);
         emit projectClosed();
     }
 }
 
-QStringList ProjectManager::getAbsoluteDataFilePaths() const
-{
-    if (!m_currentProject) {
-        return QStringList();
-    }
+//QStringList ProjectManager::getAbsoluteDataFilePaths() const
+//{
+//    if (!m_currentProject) {
+//        return QStringList();
+//    }
 
-    QStringList absolutePaths;
-    QDir projectDir(m_currentProject->projectPath);
+//    QStringList absolutePaths;
+//    QDir projectDir(m_currentProject->projectPath);
 
-    for (const QString& relativePath : m_currentProject->dataFiles) {
-        if (QFileInfo(relativePath).isAbsolute()) {
-            absolutePaths.append(relativePath);
-        } else {
-            absolutePaths.append(projectDir.absoluteFilePath(relativePath));
-        }
-    }
+//    for (const QString& relativePath : m_currentProject->dataFiles) {
+//        if (QFileInfo(relativePath).isAbsolute()) {
+//            absolutePaths.append(relativePath);
+//        } else {
+//            absolutePaths.append(projectDir.absoluteFilePath(relativePath));
+//        }
+//    }
 
-    return absolutePaths;
-}
+//    return absolutePaths;
+//}
 
-void ProjectManager::addDataFile(const QString& filePath)
-{
-    if (!m_currentProject) {
-        return;
-    }
+//void ProjectManager::addDataFile(const QString& filePath)
+//{
+//    if (!m_currentProject) {
+//        return;
+//    }
 
-    // 尝试使用相对路径
-    QDir projectDir(m_currentProject->projectPath);
-    QString relativePath = projectDir.relativeFilePath(filePath);
+//    // 尝试使用相对路径
+//    QDir projectDir(m_currentProject->projectPath);
+//    QString relativePath = projectDir.relativeFilePath(filePath);
 
-    // 如果相对路径包含 ".."，则使用绝对路径
-    if (relativePath.startsWith("..")) {
-        m_currentProject->addDataFile(filePath);
-    } else {
-        m_currentProject->addDataFile(relativePath);
-    }
+//    // 如果相对路径包含 ".."，则使用绝对路径
+//    if (relativePath.startsWith("..")) {
+//        m_currentProject->addDataFile(filePath);
+//    } else {
+//        m_currentProject->addDataFile(relativePath);
+//    }
 
-    markModified();
-}
+//    markModified();
+//}
 
-void ProjectManager::removeDataFile(const QString& filePath)
-{
-    if (!m_currentProject) {
-        return;
-    }
+//void ProjectManager::removeDataFile(const QString& filePath)
+//{
+//    if (!m_currentProject) {
+//        return;
+//    }
 
-    QDir projectDir(m_currentProject->projectPath);
-    QString relativePath = projectDir.relativeFilePath(filePath);
+//    QDir projectDir(m_currentProject->projectPath);
+//    QString relativePath = projectDir.relativeFilePath(filePath);
 
-    m_currentProject->removeDataFile(filePath);
-    m_currentProject->removeDataFile(relativePath);
+//    m_currentProject->removeDataFile(filePath);
+//    m_currentProject->removeDataFile(relativePath);
 
-    markModified();
-}
+//    markModified();
+//}
 
 void ProjectManager::loadDesignTxt(const QString &filePath)
 {
-    QFile file(filePath);
-    QString fileName = QFileInfo(filePath).fileName();
+//    QFile file(filePath);
+//    QString fileName = QFileInfo(filePath).fileName();
 
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QMessageBox::warning(nullptr, tr("导入失败"),
-                                         tr("无法打开文件：[%1]").arg(fileName));
-        qWarning() << "Cannot open file:" << filePath;
-        return;
-    }
+//    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+//        QMessageBox::warning(nullptr, tr("导入失败"),
+//                                         tr("无法打开文件：[%1]").arg(fileName));
+//        qWarning() << "Cannot open file:" << filePath;
+//        return;
+//    }
 
-    if (m_currentProject->hasDesignFile(fileName)){
+//    if (m_currentProject->hasDesignFile(fileName)){
 
-        QMessageBox::warning(nullptr, tr("重复导入"),
-                                         tr("设计线文件 [%1] 已经导入过了！").arg(fileName));
-        return;
-    }
+//        QMessageBox::warning(nullptr, tr("重复导入"),
+//                                         tr("设计线文件 [%1] 已经导入过了！").arg(fileName));
+//        return;
+//    }
 
-    QTextStream in(&file);
-    QString header = in.readLine(); // 跳过表头
+//    QTextStream in(&file);
+//    QString header = in.readLine(); // 跳过表头
 
-    QJsonArray dataArray;
-    while (!in.atEnd()) {
-        QString line = in.readLine().trimmed();
-        if (line.isEmpty()) continue;
+//    QJsonArray dataArray;
+//    while (!in.atEnd()) {
+//        QString line = in.readLine().trimmed();
+//        if (line.isEmpty()) continue;
 
-        QStringList parts = line.split('\t');
-        if (parts.size() < 5) continue;
+//        QStringList parts = line.split('\t');
+//        if (parts.size() < 5) continue;
 
-        QJsonObject obj;
-        obj["Line"] = parts[0];
-        obj["X"] = parts[1].toDouble();
-        obj["Y"] = parts[2].toDouble();
-        obj["Point"] = parts[3].toInt();
-        dataArray.append(obj);
-    }
+//        QJsonObject obj;
+//        obj["Line"] = parts[0];
+//        obj["X"] = parts[1].toDouble();
+//        obj["Y"] = parts[2].toDouble();
+//        obj["Point"] = parts[3].toInt();
+//        dataArray.append(obj);
+//    }
 
-    QJsonObject designObj;
-    designObj["fileName"] = fileName;
-    designObj["data"] = dataArray;
-    m_currentProject->designObj = designObj;
+//    QJsonObject designObj;
+//    designObj["fileName"] = fileName;
+//    designObj["data"] = dataArray;
+//    m_currentProject->designObj = designObj;
+    m_currentProject->addDesignLineFile(filePath);
 }
 
-void ProjectManager::markModified()
-{
-    if (!m_isModified) {
-        m_isModified = true;
-        emit projectModified();
-    }
-}
+//void ProjectManager::markModified()
+//{
+//    if (!m_isModified) {
+//        m_isModified = true;
+//        emit projectModified();
+//    }
+//}
 
 QString ProjectManager::getProjectFilter() const
 {

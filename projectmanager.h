@@ -1,17 +1,10 @@
 #ifndef PROJECTMANAGER_H
 #define PROJECTMANAGER_H
 
-#include "projectfile.h"
+#include "projectmodel.h"
 #include <QObject>
 #include <QFileDialog>
 #include <QMessageBox>
-
-struct DesignPoint {
-    QString line;
-    double x;
-    double y;
-    int point;
-};
 
 class QWidget;
 
@@ -30,32 +23,33 @@ public:
     void closeProject();
 
     // 获取当前项目
-    const ProjectFile* currentProject() const { return m_currentProject; }
-    ProjectFile* currentProject() { return m_currentProject; }
+    const ProjectModel* currentProject() const { return m_currentProject; }
+    ProjectModel* currentProject() { return m_currentProject; }
 
     // 项目状态
     bool hasProject() const { return m_currentProject != nullptr; }
     bool isProjectModified() const { return m_isModified; }
 
     // 数据文件操作
-    QStringList getAbsoluteDataFilePaths() const;
-    void addDataFile(const QString& filePath);
-    void removeDataFile(const QString& filePath);
+//    QStringList getAbsoluteDataFilePaths() const;
+//    void addDataFile(const QString& filePath);
+//    void removeDataFile(const QString& filePath);
 
     void loadDesignTxt(const QString &filePath);
 
 signals:
-    void projectLoaded(const QStringList& dataFiles);
+    void projectNewed();
+    void projectLoaded();
     void projectClosed();
     void projectModified();
 
 private slots:
-    void markModified();
+//    void markModified();
 
 private:
     QWidget* m_parent;
-    ProjectFile* m_currentProject;
-    QString m_currentProjectFile;
+    ProjectModel* m_currentProject;
+    QString m_currentProjectFile;   // 当前项目文件路径
     bool m_isModified;
 
     QString getProjectFilter() const;

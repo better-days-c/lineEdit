@@ -9,24 +9,28 @@ CONFIG += c++11
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    batchtab.cpp \
     datastructures.cpp \
     dattablemodel.cpp \
     main.cpp \
     mainwindow.cpp \
     plotwidget.cpp \
     previewdialog.cpp \
-    projectfile.cpp \
     projectmanager.cpp \
+    projectmodel.cpp \
+    projecttreeview.cpp \
     tablemodel.cpp
 
 HEADERS += \
+    batchtab.h \
     datastructures.h \
     dattablemodel.h \
     mainwindow.h \
     plotwidget.h \
     previewdialog.h \
-    projectfile.h \
     projectmanager.h \
+    projectmodel.h \
+    projecttreeview.h \
     tablemodel.h
 
 FORMS += \

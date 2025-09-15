@@ -12,7 +12,7 @@ DatTableModel::DatTableModel(QObject *parent)
     m_visibleColumns.insert(FN);
     m_visibleColumns.insert(X_Coordinate);
     m_visibleColumns.insert(Y_Coordinate);
-    m_visibleColumns.insert(Offset);
+    m_visibleColumns.insert(Alt);
 }
 
 void DatTableModel::initHeaders()
@@ -64,8 +64,8 @@ QVariant DatTableModel::data(const QModelIndex &index, int role) const
             return QString::number(point.coordinate.x(), 'f', 6);
         case Y_Coordinate:
             return QString::number(point.coordinate.y(), 'f', 6);
-        case Offset:
-            return QString::number(point.offset, 'f', 3);
+        case Alt:
+            return QString::number(point.alt, 'f', 3);
         default:
             // 处理扩展列
             if (actualColumn >= ColumnCount) {
@@ -77,11 +77,11 @@ QVariant DatTableModel::data(const QModelIndex &index, int role) const
     }
     else if (role == Qt::BackgroundRole) {
         // 根据数据质量设置背景色
-        if (actualColumn == Offset) {
-            if (point.offset >= m_datFileData->offsetThreshold) {
-                return QColor(200, 255, 200); // 淡绿色表示低偏航
+        if (actualColumn == Alt) {
+            if ((point.alt >= m_datFileData->lowAltThreshold) && (point.alt <= m_datFileData->highAltThreshold)) {
+                return QColor(200, 255, 200); // 淡绿色表示正常高度
             } else {
-                return QColor(255, 200, 200); // 淡红色表示高偏航
+                return QColor(255, 200, 200); // 淡红色表示异常高度
             }
         }
         // 根据列映射高亮对应的列
@@ -109,7 +109,7 @@ QVariant DatTableModel::headerData(int section, Qt::Orientation orientation, int
     return QVariant();
 }
 
-void DatTableModel::setDatFileData(DatFileData *data)
+void DatTableModel::setBatchData(DataPointData *data)
 {
     beginResetModel();
     m_datFileData = data;
@@ -189,7 +189,7 @@ void DatTableModel::setColumnMapping(const ColumnMapping &mapping)
 
     // 更新表头信息
     m_allHeaders.clear();
-    m_allHeaders << "线号" << "点号" << "X坐标" << "Y坐标" << "偏航";
+    m_allHeaders << "线号" << "点号" << "X坐标" << "Y坐标" << "雷达高度";
 
     // 可以根据需要添加更多列
     for (int i = 5; i < 20; ++i) {  // 假设最多支持20列

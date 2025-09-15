@@ -27,7 +27,7 @@ public:
     explicit PlotWidget(QWidget *parent = nullptr);
 
     // 设置数据
-    void setDatFileData(DatFileData *data);
+    void setBatchData(DataPointData *data);
 
 //    // 获取选择区域
 //    QVector<QRectF> getSelectionRegions() const { return m_selectionRegions; }
@@ -61,7 +61,7 @@ private slots:
 //    void onRubberBandChanged(const QRect &selection);
 
 private:
-    DatFileData *m_datFileData;
+    DataPointData *m_datFileData;
 
     // 视图变换
     QPointF m_offset;           // 偏移
@@ -75,8 +75,8 @@ private:
     SelectionMode m_selectionMode;
 
     // 绘制相关
-    QColor m_lowOffsetColor;   // 低偏航点颜色
-    QColor m_highOffsetColor;    // 高偏航点颜色
+    QColor m_normalAltColor;   // 低偏航点颜色
+    QColor m_abnormalAltColor;    // 高偏航点颜色
     QColor m_selectionColor;     // 选择区域颜色
 
     QVector<QPointF> m_vertices; //多边形顶点

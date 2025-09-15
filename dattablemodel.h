@@ -17,7 +17,7 @@ public:
         FN,
         X_Coordinate,
         Y_Coordinate,
-        Offset,
+        Alt,
         ColumnCount
     };
 
@@ -30,7 +30,7 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     // 设置数据
-    void setDatFileData(DatFileData *data);
+    void setBatchData(DataPointData *data);
 
     // 获取原始数据索引（考虑到隐藏的行）
     int getOriginalIndex(int viewRow) const;
@@ -60,7 +60,7 @@ signals:
     void dataChanged();
 
 private:
-    DatFileData *m_datFileData;
+    DataPointData *m_datFileData;
     QVector<int> m_visibleRows;     // 可见行在原始数据中的索引
     QSet<Column> m_visibleColumns;  // 可见的列
     QStringList m_headers;

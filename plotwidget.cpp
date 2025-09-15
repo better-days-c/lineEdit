@@ -14,8 +14,8 @@ PlotWidget::PlotWidget(QWidget *parent)
     , m_scale(1.0)
     , m_rubberBand(nullptr)
     , m_selectionMode(Normal)
-    , m_lowOffsetColor(Qt::blue)
-    , m_highOffsetColor(Qt::red)
+    , m_normalAltColor(Qt::blue)
+    , m_abnormalAltColor(Qt::red)
     , m_selectionColor(QColor(255, 255, 0, 100))
     , m_isSelecting(false)
 {
@@ -24,7 +24,7 @@ PlotWidget::PlotWidget(QWidget *parent)
     m_rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
 }
 
-void PlotWidget::setDatFileData(DatFileData *data)
+void PlotWidget::setBatchData(DataPointData *data)
 {
     m_datFileData = data;
     if (data) {
@@ -201,37 +201,22 @@ void PlotWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void PlotWidget::wheelEvent(QWheelEvent *event)
 {
-    qDebug() << "wheelEvent triggered.";
     // 缩放功能
     const double scaleFactor = 1.15;
     QPointF mousePos = event->posF();
-    qDebug() << "mousePos: " << mousePos;
-    double oldScale = m_scale;
-    qDebug() << "oldScale: " << oldScale;
-    qDebug() << "oldOffset: " << m_offset;
     QPointF oldWorldPos = screenToWorld(mousePos);
-    qDebug() << "oldWorldPos: " << oldWorldPos;
-    qDebug() << "oldScreenPos " << worldToScreen(oldWorldPos);
 
     if (event->angleDelta().y() > 0) {
         m_scale *= scaleFactor;
-        qDebug() << "zoom in";
 
     } else {
         m_scale /= scaleFactor;
-        qDebug() << "zoom out";
     }
-    qDebug() << "newScale: " << m_scale;
     m_offset = mousePos - oldWorldPos * m_scale;
-    qDebug() << "newOffset: " << m_offset;
 
     // 以鼠标位置为中心缩放
-    QPointF worldPos = screenToWorld(mousePos);
-    QPointF newScreenPos = worldToScreen(worldPos);
 //    m_offset += mousePos - newScreenPos;
 
-    qDebug() << "newWorldPos: " << worldPos;
-    qDebug() << "newScreenPos: " << newScreenPos;
     update();
 }
 
@@ -326,7 +311,7 @@ void PlotWidget::drawLines(QPainter &painter)
         if (segment.pointIndices.size() < 2) continue;
 
         // 选择颜色
-        painter.setPen(QPen(segment.hasLowOffset ? m_lowOffsetColor : m_highOffsetColor, 2));
+        painter.setPen(QPen(segment.hasNormalAlt ? m_normalAltColor : m_abnormalAltColor, 2));
 
         // 绘制线段
         for (int i = 1; i < segment.pointIndices.size(); ++i) {
@@ -360,8 +345,9 @@ void PlotWidget::drawPoints(QPainter &painter)
         QPointF screenPos = worldToScreen(point.coordinate);
 
         // 根据质量选择颜色
-        QColor color = (point.offset >= m_datFileData->offsetThreshold) ?
-                       m_lowOffsetColor : m_highOffsetColor;
+        QColor color = ((point.alt >= m_datFileData->lowAltThreshold)
+                        && (point.alt <= m_datFileData->highAltThreshold))
+                        ?m_normalAltColor : m_abnormalAltColor;
 
         painter.setPen(QPen(color, 1));
         painter.setBrush(QBrush(color));
@@ -426,11 +412,12 @@ QVector<LineSegment> PlotWidget::getQualitySegmentedLines() const
             const DataPoint &point = m_datFileData->points[idx];
             if (!point.isVisible) continue;
 
-            bool isHighQuality = point.offset >= m_datFileData->offsetThreshold;
+            bool isHighQuality = (point.alt >= m_datFileData->lowAltThreshold)
+                                && (point.alt <= m_datFileData->highAltThreshold);
 
             // 如果质量状态改变，开始新的段
             if (!currentSegment.pointIndices.isEmpty() &&
-                currentSegment.hasLowOffset != isHighQuality) {
+                currentSegment.hasNormalAlt != isHighQuality) {
 
                 if (currentSegment.pointIndices.size() >= 2) {
                     segments.append(currentSegment);
@@ -438,9 +425,9 @@ QVector<LineSegment> PlotWidget::getQualitySegmentedLines() const
 
                 currentSegment = LineSegment();
                 currentSegment.lineId = lineNumber;
-                currentSegment.hasLowOffset = isHighQuality;
+                currentSegment.hasNormalAlt = isHighQuality;
             } else if (currentSegment.pointIndices.isEmpty()) {
-                currentSegment.hasLowOffset = isHighQuality;
+                currentSegment.hasNormalAlt = isHighQuality;
             }
 
             currentSegment.pointIndices.append(idx);
