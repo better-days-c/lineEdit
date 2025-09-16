@@ -6,10 +6,9 @@
 #include <QRubberBand>
 #include <qmath.h>
 
-///删除选区按钮按下无效，view层没有删除，model层不知道有没有删除
 PlotWidget::PlotWidget(QWidget *parent)
     : QWidget(parent)
-    , m_datFileData(nullptr)
+    , m_dataPointData(nullptr)
     , m_offset(0, 0)
     , m_scale(1.0)
     , m_rubberBand(nullptr)
@@ -17,6 +16,7 @@ PlotWidget::PlotWidget(QWidget *parent)
     , m_normalAltColor(Qt::blue)
     , m_abnormalAltColor(Qt::red)
     , m_selectionColor(QColor(255, 255, 0, 100))
+    , m_lineSegmentColor(Qt::darkGray)
     , m_isSelecting(false)
 {
     setFocusPolicy(Qt::StrongFocus);
@@ -26,7 +26,8 @@ PlotWidget::PlotWidget(QWidget *parent)
 
 void PlotWidget::setBatchData(DataPointData *data)
 {
-    m_datFileData = data;
+    qDebug() << "setBatchData called.";
+    m_dataPointData = data;
     if (data) {
         updateDataRect();
         zoomToFit();
@@ -36,6 +37,7 @@ void PlotWidget::setBatchData(DataPointData *data)
 
 QPolygonF PlotWidget::getSelection() const
 {
+    qDebug() << "getSelection called.";
     return m_selectionPolygon_world;
 }
 
@@ -43,6 +45,7 @@ QPolygonF PlotWidget::getSelection() const
 // 解除选择
 void PlotWidget::clearSelection()
 {
+    qDebug() << "clearSelection called.";
 //    m_selectionRegions.clear();
     m_vertices.clear();
     m_selectionPolygon_world.clear();
@@ -55,7 +58,8 @@ void PlotWidget::clearSelection()
 // 根据图件尺寸和窗口尺寸计算自动缩放比例
 void PlotWidget::zoomToFit()
 {
-    if (!m_datFileData || m_datFileData->points.isEmpty())
+    qDebug() << "zoomToFit called.";
+    if (!m_dataPointData || m_dataPointData->points.isEmpty())
         return;
 
     updateDataRect();
@@ -78,6 +82,7 @@ void PlotWidget::zoomToFit()
 
 void PlotWidget::paintEvent(QPaintEvent *event)
 {
+    qDebug() << "paintEvent called.";
     Q_UNUSED(event)
 
     QPainter painter(this);
@@ -86,14 +91,14 @@ void PlotWidget::paintEvent(QPaintEvent *event)
     // 绘制背景
     painter.fillRect(rect(), Qt::white);
 
-    if (!m_datFileData)
+    if (!m_dataPointData)
         return;
 
     // 绘制网格
     drawGrid(painter);
 
     // 绘制线条
-    drawLines(painter);
+//    drawLines(painter);
 
     // 绘制点
     drawPoints(painter);
@@ -125,6 +130,7 @@ void PlotWidget::paintEvent(QPaintEvent *event)
 
 void PlotWidget::mousePressEvent(QMouseEvent *event)
 {
+    qDebug() << "mousePressEvent called.";
     if (event->button() == Qt::LeftButton) {
         updateSelectionMode();
 
@@ -153,6 +159,7 @@ void PlotWidget::mousePressEvent(QMouseEvent *event)
 
 void PlotWidget::mouseMoveEvent(QMouseEvent *event)
 {
+//    qDebug() << "mouseMoveEvent called.";
 //    if (m_isSelecting && m_rubberBand->isVisible()) {
 //        QRect selection(m_rubberBandOrigin, event->pos());
 //        m_rubberBand->setGeometry(selection.normalized());
@@ -168,6 +175,7 @@ void PlotWidget::mouseMoveEvent(QMouseEvent *event)
 
 void PlotWidget::mouseReleaseEvent(QMouseEvent *event)
 {
+    qDebug() << "mouseReleaseEvent called.";
 //    if (event->button() == Qt::LeftButton && m_isSelecting) {
 //        m_isSelecting = false;
 
@@ -201,6 +209,7 @@ void PlotWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void PlotWidget::wheelEvent(QWheelEvent *event)
 {
+    qDebug() << "wheelEvent called.";
     // 缩放功能
     const double scaleFactor = 1.15;
     QPointF mousePos = event->posF();
@@ -222,18 +231,21 @@ void PlotWidget::wheelEvent(QWheelEvent *event)
 
 void PlotWidget::keyPressEvent(QKeyEvent *event)
 {
+    qDebug() << "keyPressEvent called.";
     updateSelectionMode();
     QWidget::keyPressEvent(event);
 }
 
 void PlotWidget::keyReleaseEvent(QKeyEvent *event)
 {
+    qDebug() << "keyReleaseEvent called.";
     updateSelectionMode();
     QWidget::keyReleaseEvent(event);
 }
 
 void PlotWidget::resizeEvent(QResizeEvent *event)
 {
+    qDebug() << "resizeEvent called.";
     Q_UNUSED(event);
     zoomToFit();
 }
@@ -241,6 +253,7 @@ void PlotWidget::resizeEvent(QResizeEvent *event)
 
 void PlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
+    qDebug() << "mouseDoubleClickEvent called.";
     if (event->button() == Qt::LeftButton && m_isSelecting && m_vertices.size() >= 3) {
         //双击完成多边形
 
@@ -259,12 +272,15 @@ void PlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 //根据两个控制浮点数将真实坐标转换成窗口坐标
 QPointF PlotWidget::worldToScreen(const QPointF &worldPoint) const
 {
+    qDebug() << "worldToScreen called.";
+    qDebug() << worldPoint;
     return QPointF(worldPoint.x() * m_scale + m_offset.x(),
                    worldPoint.y() * m_scale + m_offset.y());
 }
 
 QPointF PlotWidget::screenToWorld(const QPointF &screenPoint) const
 {
+    qDebug() << "screenToWorld called.";
     return QPointF((screenPoint.x() - m_offset.x()) / m_scale,
                    (screenPoint.y() - m_offset.y()) / m_scale);
 }
@@ -279,15 +295,16 @@ QPointF PlotWidget::screenToWorld(const QPointF &screenPoint) const
 // 返回图件尺寸（X坐标和Y坐标范围构成的QRect）
 void PlotWidget::updateDataRect()
 {
-    if (!m_datFileData || m_datFileData->points.isEmpty())
+    qDebug() << "updateDataRect called.";
+    if (!m_dataPointData || m_dataPointData->points.isEmpty())
         return;
 
-    double minX = m_datFileData->points[0].coordinate.x();
+    double minX = m_dataPointData->points[0].coordinate.x();
     double maxX = minX;
-    double minY = m_datFileData->points[0].coordinate.y();
+    double minY = m_dataPointData->points[0].coordinate.y();
     double maxY = minY;
 
-    for (const DataPoint &point : m_datFileData->points) {
+    for (const DataPoint &point : m_dataPointData->points) {
         if (!point.isVisible) continue;
 
         minX = qMin(minX, point.coordinate.x());
@@ -299,61 +316,91 @@ void PlotWidget::updateDataRect()
     m_dataRect = QRectF(minX, minY, maxX - minX, maxY - minY);
 }
 
-//
-void PlotWidget::drawLines(QPainter &painter)
-{
-    if (!m_datFileData)
-        return;
+///drawLines的功能已并入drawPoints中
+//void PlotWidget::drawLines(QPainter &painter)
+//{
+//    qDebug() << "drawLines called.";
+//    if (!m_datFileData)
+//        return;
 
-    QVector<LineSegment> segments = getQualitySegmentedLines();
+//    QVector<LineSegment> segments = getQualitySegmentedLines();
 
-    for (const LineSegment &segment : segments) {
-        if (segment.pointIndices.size() < 2) continue;
+//    for (const LineSegment &segment : segments) {
+//        if (segment.pointIndices.size() < 2) continue;
 
-        // 选择颜色
-        painter.setPen(QPen(segment.hasNormalAlt ? m_normalAltColor : m_abnormalAltColor, 2));
+//        // 选择颜色
+//        painter.setPen(QPen(segment.hasNormalAlt ? m_normalAltColor : m_abnormalAltColor, 2));
 
-        // 绘制线段
-        for (int i = 1; i < segment.pointIndices.size(); ++i) {
-            int idx1 = segment.pointIndices[i-1];
-            int idx2 = segment.pointIndices[i];
+//        // 绘制线段
+//        for (int i = 1; i < segment.pointIndices.size(); ++i) {
+//            int idx1 = segment.pointIndices[i-1];
+//            int idx2 = segment.pointIndices[i];
 
-            if (idx1 >= m_datFileData->points.size() || idx2 >= m_datFileData->points.size())
-                continue;
+//            if (idx1 >= m_datFileData->points.size() || idx2 >= m_datFileData->points.size())
+//                continue;
 
-            const DataPoint &p1 = m_datFileData->points[idx1];
-            const DataPoint &p2 = m_datFileData->points[idx2];
+//            const DataPoint &p1 = m_datFileData->points[idx1];
+//            const DataPoint &p2 = m_datFileData->points[idx2];
 
-            if (!p1.isVisible || !p2.isVisible) continue;
+//            if (!p1.isVisible || !p2.isVisible) continue;
 
-            QPointF screen1 = worldToScreen(p1.coordinate);
-            QPointF screen2 = worldToScreen(p2.coordinate);
+//            QPointF screen1 = worldToScreen(p1.coordinate);
+//            QPointF screen2 = worldToScreen(p2.coordinate);
 
-            painter.drawLine(screen1, screen2);
-        }
-    }
-}
+//            painter.drawLine(screen1, screen2);
+//        }
+//    }
+//}
 
 void PlotWidget::drawPoints(QPainter &painter)
 {
-    if (!m_datFileData)
+    qDebug() << "drawPoints called.";
+    if (!m_dataPointData)
         return;
 
-    for (const DataPoint &point : m_datFileData->points) {
-        if (!point.isVisible) continue;
+//    for (const DataPoint &point : m_dataPointData->points) {
+//        if (!point.isVisible) continue;
 
-        QPointF screenPos = worldToScreen(point.coordinate);
+//        QPointF screenPos = worldToScreen(point.coordinate);
 
-        // 根据质量选择颜色
-        QColor color = ((point.alt >= m_datFileData->lowAltThreshold)
-                        && (point.alt <= m_datFileData->highAltThreshold))
-                        ?m_normalAltColor : m_abnormalAltColor;
+//        // 根据质量选择颜色
+//        QColor color = ((point.alt >= m_dataPointData->lowAltThreshold)
+//                        && (point.alt <= m_dataPointData->highAltThreshold))
+//                        ?m_normalAltColor : m_abnormalAltColor;
 
-        painter.setPen(QPen(color, 1));
-        painter.setBrush(QBrush(color));
+//        painter.setPen(QPen(color, 1));
+//        painter.setBrush(QBrush(color));
 
-        // 绘制小圆点
-        painter.drawEllipse(screenPos, 3, 3);
+//        // 绘制小圆点
+//        painter.drawEllipse(screenPos, 3, 3);
+//    }
+
+    DataPoint lastDataPoint = m_dataPointData->points[0];
+    QPointF lastScreenPos = worldToScreen(lastDataPoint.coordinate);
+    for (int i = 1; i < m_dataPointData->points.size(); ++i) {
+        const DataPoint& currentDataPoint = m_dataPointData->points[i];
+        QPointF currentScreenPos = worldToScreen(currentDataPoint.coordinate);
+        if (lastDataPoint.isVisible) {
+            QColor color = lastDataPoint.isNormalAlt ?m_normalAltColor : m_abnormalAltColor;
+            painter.setPen(QPen(color, 1));
+            painter.setBrush(QBrush(color));
+            painter.drawEllipse(lastScreenPos, 3, 3);
+        }
+        if (currentDataPoint.isVisible) {
+            QColor color = currentDataPoint.isNormalAlt ?m_normalAltColor : m_abnormalAltColor;
+            painter.setPen(QPen(color, 1));
+            painter.setBrush(QBrush(color));
+            painter.drawEllipse(currentScreenPos, 3, 3);
+        }
+        if (lastDataPoint.isVisible && currentDataPoint.isVisible
+                && (lastDataPoint.fn + 20 > currentDataPoint.fn)
+                && (lastDataPoint.lineId == currentDataPoint.lineId)) {
+            painter.setPen(QPen(m_lineSegmentColor, 1));
+            painter.setBrush(QBrush(m_lineSegmentColor));
+            painter.drawLine(currentScreenPos, lastScreenPos);
+        }
+        lastDataPoint = currentDataPoint;
+        lastScreenPos = currentScreenPos;
     }
 }
 
@@ -373,6 +420,7 @@ void PlotWidget::drawPoints(QPainter &painter)
 
 void PlotWidget::drawGrid(QPainter &painter)
 {
+    qDebug() << "drawGrid called.";
     // 简单的网格绘制
     painter.setPen(QPen(Qt::lightGray, 1));
 
@@ -391,13 +439,14 @@ void PlotWidget::drawGrid(QPainter &painter)
 
 QVector<LineSegment> PlotWidget::getQualitySegmentedLines() const
 {
+    qDebug() << "getQualitySegmentedLines called.";
     QVector<LineSegment> segments;
 
-    if (!m_datFileData)
+    if (!m_dataPointData)
         return segments;
 
     // 遍历每条线
-    for (auto it = m_datFileData->lineMap.begin(); it != m_datFileData->lineMap.end(); ++it) {
+    for (auto it = m_dataPointData->lineMap.begin(); it != m_dataPointData->lineMap.end(); ++it) {
         const QString &lineNumber = it.key();
         const QVector<int> &pointIndices = it.value();
 
@@ -407,13 +456,13 @@ QVector<LineSegment> PlotWidget::getQualitySegmentedLines() const
         currentSegment.lineId = lineNumber;
 
         for (int idx : pointIndices) {
-            if (idx >= m_datFileData->points.size()) continue;
+            if (idx >= m_dataPointData->points.size()) continue;
 
-            const DataPoint &point = m_datFileData->points[idx];
+            const DataPoint &point = m_dataPointData->points[idx];
             if (!point.isVisible) continue;
 
-            bool isHighQuality = (point.alt >= m_datFileData->lowAltThreshold)
-                                && (point.alt <= m_datFileData->highAltThreshold);
+            bool isHighQuality = (point.alt >= m_dataPointData->lowAltThreshold)
+                                && (point.alt <= m_dataPointData->highAltThreshold);
 
             // 如果质量状态改变，开始新的段
             if (!currentSegment.pointIndices.isEmpty() &&
@@ -444,6 +493,7 @@ QVector<LineSegment> PlotWidget::getQualitySegmentedLines() const
 
 bool PlotWidget::isPointSelected(const QPointF &point) const
 {
+    qDebug() << "isPointSelected called.";
 //    for (const QRectF &region : m_selectionRegions) {
 //        if (region.contains(point)) {
 //            return true;
@@ -458,6 +508,7 @@ bool PlotWidget::isPointSelected(const QPointF &point) const
 
 void PlotWidget::updateSelectionMode()
 {
+    qDebug() << "updateSelectionMode called.";
     QApplication *app = qobject_cast<QApplication*>(QApplication::instance());
     Qt::KeyboardModifiers modifiers = app->keyboardModifiers();
 

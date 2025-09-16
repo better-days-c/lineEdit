@@ -43,7 +43,7 @@ public:
 public slots:
     void onSelectionChanged();
     void onColumnVisibilityChanged();
-    void onQualityThresholdChanged(double value);
+    void onAltThresholdChanged(double value);
     void zoomToFit();
     void clearSelection();
 
@@ -82,6 +82,7 @@ private:
     QDoubleSpinBox *m_lowAltThresholdSpin;
     QDoubleSpinBox *m_highAltThresholdSpin;
 //    QPushButton *m_deleteLowQualityBtn;
+    QPushButton *m_setThresholdBtn;
 
     // 选择控制
     QPushButton *m_applySelectionBtn;

@@ -61,7 +61,7 @@ private slots:
 //    void onRubberBandChanged(const QRect &selection);
 
 private:
-    DataPointData *m_datFileData;
+    DataPointData *m_dataPointData;
 
     // 视图变换
     QPointF m_offset;           // 偏移
@@ -78,6 +78,7 @@ private:
     QColor m_normalAltColor;   // 低偏航点颜色
     QColor m_abnormalAltColor;    // 高偏航点颜色
     QColor m_selectionColor;     // 选择区域颜色
+    QColor m_lineSegmentColor;  //可见线段颜色
 
     QVector<QPointF> m_vertices; //多边形顶点
     QPoint m_currentPoint;  //当前鼠标位置
@@ -92,7 +93,7 @@ private:
     QRectF screenToWorld(const QRectF &screenRect) const;
 
     void updateDataRect();
-    void drawLines(QPainter &painter);
+//    void drawLines(QPainter &painter);
     void drawPoints(QPainter &painter);
 //    void drawSelectionRegions(QPainter &painter);
     void drawGrid(QPainter &painter);

@@ -13,11 +13,12 @@ struct DataPoint {
     QPointF coordinate; //xy坐标
     double alt;      //雷达高度
     bool isVisible;     //是否在视图中可见
+    bool isNormalAlt = true;   //高度是否正常
 
-    DataPoint(): fn(0), coordinate(0,0), alt(0.0), isVisible(true) {}
+    DataPoint(): fn(0), coordinate(0,0), alt(0.0), isVisible(true), isNormalAlt(true) {}
 
     DataPoint(const QString& line, int point, double x, double y, double alt)
-        : lineId(line), fn(point), coordinate(x, y), alt(alt), isVisible(true) {}
+        : lineId(line), fn(point), coordinate(x, y), alt(alt), isVisible(true), isNormalAlt(true) {}
 
     QJsonObject toJson() const;
     static DataPoint fromJson(const QJsonObject& json);
@@ -50,7 +51,7 @@ class DataPointData{
 public:
     QVector<DataPoint> points;              // 所有数据点
     QHash<QString, QVector<int>> lineMap;   // 线号到点索引的映射，<线号, [fn1, fn2, ...]>
-    QString fileName;                       // 文件名
+    QString batchName;                       // 文件名
     double lowAltThreshold;                 // 高度下阈
     double highAltThreshold;
 
@@ -86,11 +87,12 @@ public:
     ///为单个线段匹配线号
     QString matchLineNumber(int fn, const QJsonObject& designObj);  // 输入: 每个线段的第一个点号; 输出: 匹配到的线号
 
-private:
     //检查高度正常
     bool isNormalAlt(double alt) const{
         return (alt >= lowAltThreshold) && (alt <= highAltThreshold);
     }
+private:
+
 };
 
 #endif  //DATASRUCTURE_H

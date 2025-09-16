@@ -1,4 +1,5 @@
 #include "batchtab.h"
+#include <QMessageBox>
 
 BatchTab::BatchTab(int batchIndex, QWidget *parent, ProjectModel *projectModel)
     : QWidget(parent)
@@ -95,31 +96,38 @@ void BatchTab::setupControlPanel()
     m_qualityControlGroup = new QGroupBox("质量控制", this);
     QVBoxLayout *qualityLayout = new QVBoxLayout(m_qualityControlGroup);
 
-    QHBoxLayout *thresholdLayout = new QHBoxLayout();
+    QVBoxLayout *thresholdLayout = new QVBoxLayout();
     thresholdLayout->addWidget(new QLabel("高度阈值:", this));
+    QHBoxLayout *thresholdSpinButtonLayout = new QHBoxLayout();
     m_lowAltThresholdSpin = new QDoubleSpinBox(this);
     m_lowAltThresholdSpin->setRange(0.0, 200.0);
     m_lowAltThresholdSpin->setSingleStep(1.0);
     m_lowAltThresholdSpin->setValue(m_dataPointData->lowAltThreshold);
     m_lowAltThresholdSpin->setDecimals(2);
-    thresholdLayout->addWidget(m_lowAltThresholdSpin);
+    thresholdSpinButtonLayout->addWidget(m_lowAltThresholdSpin);
 
     m_highAltThresholdSpin = new QDoubleSpinBox(this);
     m_highAltThresholdSpin->setRange(0.0, 200.0);
     m_highAltThresholdSpin->setSingleStep(1.0);
     m_highAltThresholdSpin->setValue(m_dataPointData->highAltThreshold);
     m_highAltThresholdSpin->setDecimals(2);
-    thresholdLayout->addWidget(m_highAltThresholdSpin);
+    thresholdSpinButtonLayout->addWidget(m_highAltThresholdSpin);
+
+    m_setThresholdBtn = new QPushButton("设置阈值", this);
+    thresholdSpinButtonLayout->addWidget(m_setThresholdBtn);
+
+    thresholdLayout->addLayout(thresholdSpinButtonLayout);
 
 //    m_deleteLowQualityBtn = new QPushButton("删除低质量点", this);
 
     qualityLayout->addLayout(thresholdLayout);
 //    qualityLayout->addWidget(m_deleteLowQualityBtn);
 
-    connect(m_lowAltThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &BatchTab::onQualityThresholdChanged);
-    connect(m_highAltThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &BatchTab::onQualityThresholdChanged);
+//    connect(m_lowAltThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+//            this, &BatchTab::onAltThresholdChanged);
+//    connect(m_highAltThresholdSpin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+//            this, &BatchTab::onAltThresholdChanged);
+    connect(m_setThresholdBtn, &QPushButton::clicked, this, &BatchTab::onAltThresholdChanged);
 //    connect(m_deleteLowQualityBtn, &QPushButton::clicked, this, &DatFileTab::deleteLowQualityPoints);
 
     // 选择控制组
@@ -155,6 +163,8 @@ void BatchTab::setupControlPanel()
     layout->addWidget(m_selectionControlGroup);
     layout->addWidget(statusGroup);
     layout->addStretch();
+
+        onAltThresholdChanged(1);
 }
 
 void BatchTab::setProjectModel(ProjectModel *model) {
@@ -205,12 +215,19 @@ void BatchTab::onColumnVisibilityChanged()
     m_tableModel->setColumnVisible(DatTableModel::Alt, m_showQualityCheck->isChecked());
 }
 
-void BatchTab::onQualityThresholdChanged(double value)
+void BatchTab::onAltThresholdChanged(double value)
 {
     Q_UNUSED(value);
-    m_dataPointData->setThreshold(m_lowAltThresholdSpin->value(), m_highAltThresholdSpin->value());
-    m_plotWidget->update();
-    updateStatusInfo();
+    if (m_lowAltThresholdSpin->value() < m_highAltThresholdSpin->value()){
+        m_dataPointData->setThreshold(m_lowAltThresholdSpin->value(), m_highAltThresholdSpin->value());
+        m_plotWidget->update();
+        updateStatusInfo();
+        for (DataPoint &point: m_dataPointData->points) {
+            point.isNormalAlt = m_dataPointData->isNormalAlt(point.alt);
+        }
+    }
+    else
+        QMessageBox::warning(this, "错误", "无效的高度阈值设置！");
 }
 
 //void DatFileTab::deleteLowQualityPoints()
