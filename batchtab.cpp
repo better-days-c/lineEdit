@@ -16,6 +16,7 @@ BatchTab::BatchTab(int batchIndex, QWidget *parent, ProjectModel *projectModel)
     setupUI();
     setupControlPanel();
     updateStatusInfo();
+    onAltThresholdChanged(1);
 }
 
 void BatchTab::setupUI()
@@ -38,7 +39,7 @@ void BatchTab::setupUI()
 
     // 创建控制面板
     m_controlPanel = new QWidget(this);
-    m_controlPanel->setMaximumWidth(300);
+    m_controlPanel->setMaximumWidth(400);
     m_controlPanel->setMinimumWidth(250);
 
     // 组装UI
@@ -163,8 +164,6 @@ void BatchTab::setupControlPanel()
     layout->addWidget(m_selectionControlGroup);
     layout->addWidget(statusGroup);
     layout->addStretch();
-
-        onAltThresholdChanged(1);
 }
 
 void BatchTab::setProjectModel(ProjectModel *model) {
@@ -220,14 +219,16 @@ void BatchTab::onAltThresholdChanged(double value)
     Q_UNUSED(value);
     if (m_lowAltThresholdSpin->value() < m_highAltThresholdSpin->value()){
         m_dataPointData->setThreshold(m_lowAltThresholdSpin->value(), m_highAltThresholdSpin->value());
-        m_plotWidget->update();
         updateStatusInfo();
         for (DataPoint &point: m_dataPointData->points) {
             point.isNormalAlt = m_dataPointData->isNormalAlt(point.alt);
         }
+        m_plotWidget->invalidatePoints();
+//        m_plotWidget->update();
     }
     else
         QMessageBox::warning(this, "错误", "无效的高度阈值设置！");
+    qDebug() << "onALtThresholdChanged";
 }
 
 //void DatFileTab::deleteLowQualityPoints()
@@ -249,7 +250,8 @@ void BatchTab::applySelection()
 
     m_dataPointData->regenerateLineNumbers();
     m_tableModel->refreshVisibleRows();
-    m_plotWidget->update();
+    m_plotWidget->invalidatePoints();
+//    m_plotWidget->update();
     updateStatusInfo();
 }
 

@@ -74,7 +74,6 @@ void MainWindow::setupUI()
 
     connect(m_tabWidget, &QTabWidget::tabCloseRequested, this, &MainWindow::closeCurrentTab);
     connect(m_tabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
-
 //    setCentralWidget(m_tabWidget);
 }
 
@@ -165,7 +164,7 @@ void MainWindow::setupMenuBar()
 
     m_zoomToFitAction = new QAction("缩放至适合(&F)", this);
     m_zoomToFitAction->setStatusTip("缩放到适合窗口大小");
-    m_zoomToFitAction->setEnabled(false);
+//    m_zoomToFitAction->setEnabled(false);
     viewMenu->addAction(m_zoomToFitAction);
 
     m_clearSelectionAction = new QAction("清除选择(&C)", this);
@@ -356,6 +355,7 @@ void MainWindow::onSelectionChanged()
     // 更新Action的启用状态
     QModelIndex batchIndex = m_treeView->getSelectedBatchIndex();
     m_openDataAction->setEnabled(batchIndex.isValid());
+    m_exportAction->setEnabled(batchIndex.isValid());
 }
 
 void MainWindow::onOpenDesignLineFile()

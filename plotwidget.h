@@ -41,6 +41,8 @@ public:
     // 缩放到适合大小
     void zoomToFit();
 
+    void updatePointsCache();
+
 signals:
     void selectionChanged();
     void pointsSelected(const QVector<int>& indices);
@@ -86,6 +88,9 @@ private:
     QPolygonF m_selectionPolygon_screen;    //完成的多边形选区
     QPolygonF m_selectionPolygon_world;
 
+    QPixmap m_pointsCache;      // 缓存数据点
+    bool m_pointsDirty = true;
+
 
     // 辅助函数
     QPointF worldToScreen(const QPointF &worldPoint) const;
@@ -106,6 +111,9 @@ private:
 
     // 更新选择模式
     void updateSelectionMode();
+
+public slots:
+    void invalidatePoints() { m_pointsDirty = true; update(); }
 };
 
 

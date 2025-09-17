@@ -26,7 +26,6 @@ PlotWidget::PlotWidget(QWidget *parent)
 
 void PlotWidget::setBatchData(DataPointData *data)
 {
-    qDebug() << "setBatchData called.";
     m_dataPointData = data;
     if (data) {
         updateDataRect();
@@ -37,7 +36,6 @@ void PlotWidget::setBatchData(DataPointData *data)
 
 QPolygonF PlotWidget::getSelection() const
 {
-    qDebug() << "getSelection called.";
     return m_selectionPolygon_world;
 }
 
@@ -45,7 +43,6 @@ QPolygonF PlotWidget::getSelection() const
 // 解除选择
 void PlotWidget::clearSelection()
 {
-    qDebug() << "clearSelection called.";
 //    m_selectionRegions.clear();
     m_vertices.clear();
     m_selectionPolygon_world.clear();
@@ -58,7 +55,6 @@ void PlotWidget::clearSelection()
 // 根据图件尺寸和窗口尺寸计算自动缩放比例
 void PlotWidget::zoomToFit()
 {
-    qDebug() << "zoomToFit called.";
     if (!m_dataPointData || m_dataPointData->points.isEmpty())
         return;
 
@@ -77,12 +73,14 @@ void PlotWidget::zoomToFit()
     QPointF center = m_dataRect.center();
     m_offset = QPointF(widgetSize.width() / 2.0, widgetSize.height() / 2.0) -
                QPointF(center.x() * m_scale, center.y() * m_scale);
-    update();
+    invalidatePoints();
+//    update();
 }
 
+/// 只要有一点点改变就会调用paintEvent，进而调用drawPoints，paintEvent太臃肿了所以很卡
+/// 把drawPoints解耦出去，仅在缩放、改变阈值、应用选区裁剪的时候才会调用
 void PlotWidget::paintEvent(QPaintEvent *event)
 {
-    qDebug() << "paintEvent called.";
     Q_UNUSED(event)
 
     QPainter painter(this);
@@ -101,10 +99,19 @@ void PlotWidget::paintEvent(QPaintEvent *event)
 //    drawLines(painter);
 
     // 绘制点
-    drawPoints(painter);
+//    drawPoints(painter);
 
     // 绘制选择区域
 //    drawSelectionRegions(painter);
+
+    // 更新数据点缓存（只在需要时更新）
+     if (m_pointsDirty || m_pointsCache.size() != size()) {
+         updatePointsCache();
+         m_pointsDirty = false;
+     }
+
+     // 合成所有图层
+     painter.drawPixmap(0, 0, m_pointsCache);
 
     // 绘制多边形选区
     if (!m_vertices.isEmpty()) {
@@ -128,9 +135,18 @@ void PlotWidget::paintEvent(QPaintEvent *event)
     }
 }
 
+void PlotWidget::updatePointsCache()
+{
+    m_pointsCache = QPixmap(size());
+    m_pointsCache.fill(Qt::transparent);
+
+    QPainter painter(&m_pointsCache);
+    painter.setRenderHint(QPainter::Antialiasing);
+    drawPoints(painter);
+}
+
 void PlotWidget::mousePressEvent(QMouseEvent *event)
 {
-    qDebug() << "mousePressEvent called.";
     if (event->button() == Qt::LeftButton) {
         updateSelectionMode();
 
@@ -175,7 +191,6 @@ void PlotWidget::mouseMoveEvent(QMouseEvent *event)
 
 void PlotWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-    qDebug() << "mouseReleaseEvent called.";
 //    if (event->button() == Qt::LeftButton && m_isSelecting) {
 //        m_isSelecting = false;
 
@@ -209,7 +224,6 @@ void PlotWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void PlotWidget::wheelEvent(QWheelEvent *event)
 {
-    qDebug() << "wheelEvent called.";
     // 缩放功能
     const double scaleFactor = 1.15;
     QPointF mousePos = event->posF();
@@ -226,26 +240,25 @@ void PlotWidget::wheelEvent(QWheelEvent *event)
     // 以鼠标位置为中心缩放
 //    m_offset += mousePos - newScreenPos;
 
-    update();
+    invalidatePoints();
+
+//    update();
 }
 
 void PlotWidget::keyPressEvent(QKeyEvent *event)
 {
-    qDebug() << "keyPressEvent called.";
     updateSelectionMode();
     QWidget::keyPressEvent(event);
 }
 
 void PlotWidget::keyReleaseEvent(QKeyEvent *event)
 {
-    qDebug() << "keyReleaseEvent called.";
     updateSelectionMode();
     QWidget::keyReleaseEvent(event);
 }
 
 void PlotWidget::resizeEvent(QResizeEvent *event)
 {
-    qDebug() << "resizeEvent called.";
     Q_UNUSED(event);
     zoomToFit();
 }
@@ -253,7 +266,6 @@ void PlotWidget::resizeEvent(QResizeEvent *event)
 
 void PlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    qDebug() << "mouseDoubleClickEvent called.";
     if (event->button() == Qt::LeftButton && m_isSelecting && m_vertices.size() >= 3) {
         //双击完成多边形
 
@@ -272,15 +284,14 @@ void PlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 //根据两个控制浮点数将真实坐标转换成窗口坐标
 QPointF PlotWidget::worldToScreen(const QPointF &worldPoint) const
 {
-    qDebug() << "worldToScreen called.";
-    qDebug() << worldPoint;
+//    qDebug() << "worldToScreen called.";
+//    qDebug() << worldPoint;
     return QPointF(worldPoint.x() * m_scale + m_offset.x(),
                    worldPoint.y() * m_scale + m_offset.y());
 }
 
 QPointF PlotWidget::screenToWorld(const QPointF &screenPoint) const
 {
-    qDebug() << "screenToWorld called.";
     return QPointF((screenPoint.x() - m_offset.x()) / m_scale,
                    (screenPoint.y() - m_offset.y()) / m_scale);
 }
@@ -295,7 +306,6 @@ QPointF PlotWidget::screenToWorld(const QPointF &screenPoint) const
 // 返回图件尺寸（X坐标和Y坐标范围构成的QRect）
 void PlotWidget::updateDataRect()
 {
-    qDebug() << "updateDataRect called.";
     if (!m_dataPointData || m_dataPointData->points.isEmpty())
         return;
 
@@ -354,7 +364,6 @@ void PlotWidget::updateDataRect()
 
 void PlotWidget::drawPoints(QPainter &painter)
 {
-    qDebug() << "drawPoints called.";
     if (!m_dataPointData)
         return;
 
@@ -377,20 +386,21 @@ void PlotWidget::drawPoints(QPainter &painter)
 
     DataPoint lastDataPoint = m_dataPointData->points[0];
     QPointF lastScreenPos = worldToScreen(lastDataPoint.coordinate);
+    if (lastDataPoint.isVisible) {
+        QColor color = lastDataPoint.isNormalAlt ?m_normalAltColor : m_abnormalAltColor;
+        painter.setPen(QPen(color, 1));
+        painter.setBrush(QBrush(color));
+        painter.drawEllipse(lastScreenPos, 3, 3);
+    }
     for (int i = 1; i < m_dataPointData->points.size(); ++i) {
         const DataPoint& currentDataPoint = m_dataPointData->points[i];
         QPointF currentScreenPos = worldToScreen(currentDataPoint.coordinate);
-        if (lastDataPoint.isVisible) {
-            QColor color = lastDataPoint.isNormalAlt ?m_normalAltColor : m_abnormalAltColor;
-            painter.setPen(QPen(color, 1));
-            painter.setBrush(QBrush(color));
-            painter.drawEllipse(lastScreenPos, 3, 3);
-        }
+
         if (currentDataPoint.isVisible) {
             QColor color = currentDataPoint.isNormalAlt ?m_normalAltColor : m_abnormalAltColor;
             painter.setPen(QPen(color, 1));
             painter.setBrush(QBrush(color));
-            painter.drawEllipse(currentScreenPos, 3, 3);
+            painter.drawEllipse(currentScreenPos, 2, 2);
         }
         if (lastDataPoint.isVisible && currentDataPoint.isVisible
                 && (lastDataPoint.fn + 20 > currentDataPoint.fn)
@@ -420,7 +430,6 @@ void PlotWidget::drawPoints(QPainter &painter)
 
 void PlotWidget::drawGrid(QPainter &painter)
 {
-    qDebug() << "drawGrid called.";
     // 简单的网格绘制
     painter.setPen(QPen(Qt::lightGray, 1));
 
@@ -439,7 +448,6 @@ void PlotWidget::drawGrid(QPainter &painter)
 
 QVector<LineSegment> PlotWidget::getQualitySegmentedLines() const
 {
-    qDebug() << "getQualitySegmentedLines called.";
     QVector<LineSegment> segments;
 
     if (!m_dataPointData)
@@ -493,7 +501,6 @@ QVector<LineSegment> PlotWidget::getQualitySegmentedLines() const
 
 bool PlotWidget::isPointSelected(const QPointF &point) const
 {
-    qDebug() << "isPointSelected called.";
 //    for (const QRectF &region : m_selectionRegions) {
 //        if (region.contains(point)) {
 //            return true;
@@ -508,7 +515,6 @@ bool PlotWidget::isPointSelected(const QPointF &point) const
 
 void PlotWidget::updateSelectionMode()
 {
-    qDebug() << "updateSelectionMode called.";
     QApplication *app = qobject_cast<QApplication*>(QApplication::instance());
     Qt::KeyboardModifiers modifiers = app->keyboardModifiers();
 
