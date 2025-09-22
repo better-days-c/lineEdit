@@ -47,7 +47,7 @@ public:
     /// 设计线文件(json存储
     QJsonObject designObj;
 
-    QList<DesignLineFile> m_designLines;
+    QList<DesignLineFile> m_designLinesFile;
     QList<Batch> m_batches;
 
     // 保存和加载项目文件
@@ -58,7 +58,7 @@ public:
     // 设计线相关操作
     bool addDesignLineFile(const QString& filePath);
     bool removeDesignLineFile(int index);
-    QList<DesignLineFile>& getDesignLines() { return m_designLines; }
+    QList<DesignLineFile>& getDesignLines() { return m_designLinesFile; }
     void setDesignLineVisibility(int index, bool visible);
 
     // 测试架次相关操作

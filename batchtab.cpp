@@ -12,6 +12,7 @@ BatchTab::BatchTab(int batchIndex, QWidget *parent, ProjectModel *projectModel)
     , m_projectModel(nullptr)
 {
     m_dataPointData = new DataPointData;
+//    m_designLines = new QList<DesignLine>;
     setProjectModel(projectModel);
     setupUI();
     setupControlPanel();
@@ -27,6 +28,7 @@ void BatchTab::setupUI()
     // 创建绘图组件
     m_plotWidget = new PlotWidget(this);
     m_plotWidget->setBatchData(m_dataPointData);
+    m_plotWidget->setDesignLinesFile(m_designLinesFile);
 
     // 创建右侧分割器（垂直）
     m_rightSplitter = new QSplitter(Qt::Vertical, this);
@@ -77,7 +79,7 @@ void BatchTab::setupControlPanel()
     m_showXCoordCheck->setChecked(true);
     m_showYCoordCheck = new QCheckBox("Y坐标", this);
     m_showYCoordCheck->setChecked(true);
-    m_showQualityCheck = new QCheckBox("数据质量", this);
+    m_showQualityCheck = new QCheckBox("飞行高度", this);
     m_showQualityCheck->setChecked(true);
 
     columnLayout->addWidget(m_showLineNumberCheck);
@@ -135,16 +137,26 @@ void BatchTab::setupControlPanel()
     m_selectionControlGroup = new QGroupBox("选择操作", this);
     QVBoxLayout *selectionLayout = new QVBoxLayout(m_selectionControlGroup);
 
-    m_applySelectionBtn = new QPushButton("应用选区", this);
-    m_clearSelectionBtn = new QPushButton("清除选择", this);
-    m_invertSelectionBtn = new QPushButton("反转选择", this);
+    QHBoxLayout *startEndSelectingLayout = new QHBoxLayout();
+    m_startSelectingBtn = new QPushButton("开始选择", this);
+    m_endSelectingBtn = new QPushButton("结束选择", this);
+    m_endSelectingBtn->setEnabled(false);
+    startEndSelectingLayout->addWidget(m_startSelectingBtn);
+    startEndSelectingLayout->addWidget(m_endSelectingBtn);
+    selectionLayout->addLayout(startEndSelectingLayout);
 
-    selectionLayout->addWidget(m_applySelectionBtn);
+    m_clearSelectionBtn = new QPushButton("清除选择", this);
+    m_applySelectionBtn = new QPushButton("应用选区", this);
+//    m_invertSelectionBtn = new QPushButton("反转选择", this);
+
     selectionLayout->addWidget(m_clearSelectionBtn);
-    selectionLayout->addWidget(m_invertSelectionBtn);
+    selectionLayout->addWidget(m_applySelectionBtn);
+//    selectionLayout->addWidget(m_invertSelectionBtn);
 
     connect(m_applySelectionBtn, &QPushButton::clicked, this, &BatchTab::applySelection);
     connect(m_clearSelectionBtn, &QPushButton::clicked, this, &BatchTab::clearSelection);
+    connect(m_startSelectingBtn, &QPushButton::clicked, this, &BatchTab::startSelecting);
+    connect(m_endSelectingBtn, &QPushButton::clicked, this, &BatchTab::endSelecting);
 
     // 状态信息
     QGroupBox *statusGroup = new QGroupBox("状态信息", this);
@@ -153,10 +165,13 @@ void BatchTab::setupControlPanel()
     m_pointCountLabel = new QLabel(this);
     m_lineCountLabel = new QLabel(this);
     m_selectionCountLabel = new QLabel(this);
+    m_selectedPointLabel = new QLabel(this);
 
     statusLayout->addWidget(m_pointCountLabel);
     statusLayout->addWidget(m_lineCountLabel);
     statusLayout->addWidget(m_selectionCountLabel);
+    statusLayout->addWidget(m_selectedPointLabel);
+    connect(m_plotWidget, &PlotWidget::pointClicked, this, &BatchTab::updateSelectedPoint);
 
     // 组装控制面板
     layout->addWidget(m_columnControlGroup);
@@ -177,6 +192,7 @@ void BatchTab::setProjectModel(ProjectModel *model) {
         m_dataPointData->addPoint(point);
     }
     m_batchName = m_projectModel->getBatches()[m_batchIndex].batchName;
+    m_designLinesFile = m_projectModel->getDesignLines();
 }
 
 void BatchTab::updateStatusInfo()
@@ -198,6 +214,22 @@ void BatchTab::updateStatusInfo()
 
     /// TODO: 更新选择计数
     m_selectionCountLabel->setText("选中点: 0");
+}
+
+void BatchTab::updateSelectedPoint(int index)
+{
+    if (!m_selectedPointLabel || index < 0 || index >= m_dataPointData->points.size()) {
+        return;
+    }
+
+    const DataPoint& point = m_dataPointData->points[index];
+
+    // 格式化状态栏信息
+    QString info = QString("点号: %1 | 线号: %2")
+                       .arg(point.fn)
+                       .arg(point.lineId);
+
+    m_selectedPointLabel->setText(info);
 }
 
 void BatchTab::onSelectionChanged()
@@ -253,6 +285,7 @@ void BatchTab::applySelection()
     m_plotWidget->invalidatePoints();
 //    m_plotWidget->update();
     updateStatusInfo();
+    m_plotWidget->clearSelection();
 }
 
 void BatchTab::zoomToFit()
@@ -310,4 +343,19 @@ void BatchTab::applyColumnMapping(const ColumnMapping &mapping)
 
     // 更新状态信息
     updateStatusInfo();
+}
+
+void BatchTab::startSelecting()
+{
+    m_plotWidget->setClickMode(PlotWidget::Select);
+    m_startSelectingBtn->setEnabled(false);
+    m_endSelectingBtn->setEnabled(true);
+}
+
+void BatchTab::endSelecting()
+{
+    m_plotWidget->clearSelection();
+    m_plotWidget->setClickMode(PlotWidget::Normal);
+    m_endSelectingBtn->setEnabled(false);
+    m_startSelectingBtn->setEnabled(true);
 }

@@ -12,11 +12,12 @@ PlotWidget::PlotWidget(QWidget *parent)
     , m_offset(0, 0)
     , m_scale(1.0)
     , m_rubberBand(nullptr)
-    , m_selectionMode(Normal)
+//    , m_selectionMode(Normal)
     , m_normalAltColor(Qt::blue)
     , m_abnormalAltColor(Qt::red)
     , m_selectionColor(QColor(255, 255, 0, 100))
     , m_lineSegmentColor(Qt::darkGray)
+    , m_designLineColor(Qt::lightGray)
     , m_isSelecting(false)
 {
     setFocusPolicy(Qt::StrongFocus);
@@ -32,6 +33,11 @@ void PlotWidget::setBatchData(DataPointData *data)
         zoomToFit();
     }
     update();
+}
+
+void PlotWidget::setDesignLinesFile(QList<DesignLineFile> &data)
+{
+    m_designLinesFile = data;
 }
 
 QPolygonF PlotWidget::getSelection() const
@@ -95,6 +101,8 @@ void PlotWidget::paintEvent(QPaintEvent *event)
     // 绘制网格
     drawGrid(painter);
 
+    drawDesignLines(painter);
+
     // 绘制线条
 //    drawLines(painter);
 
@@ -147,27 +155,40 @@ void PlotWidget::updatePointsCache()
 
 void PlotWidget::mousePressEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton) {
-        updateSelectionMode();
+    if (m_clickMode == Select) {
+        if (event->button() == Qt::LeftButton) {
+//        updateSelectionMode();
 
 //        m_rubberBandOrigin = event->pos();
 //        m_rubberBand->setGeometry(QRect(m_rubberBandOrigin, QSize()));
 //        m_rubberBand->show();
 //        m_isSelecting = true;
-        if (!m_isSelecting) {
+            if (!m_isSelecting) {
             // 开始新的选区
-            m_vertices.clear();
-            m_selectionPolygon_screen.clear();
-            m_selectionPolygon_world.clear();
-            m_isSelecting = true;
-        }
+                m_vertices.clear();
+                m_selectionPolygon_screen.clear();
+                m_selectionPolygon_world.clear();
+                m_isSelecting = true;
+            }
 
-        m_vertices.append(event->pos());
-        update();
-    }
-    else if (event->button() == Qt::RightButton && m_isSelecting) {
+            m_vertices.append(event->pos());
+            update();
+        }
+        else if (event->button() == Qt::RightButton && m_isSelecting) {
         // 右键取消选区
-        clearSelection();
+            clearSelection();
+        }
+    }
+    else {
+        if (event->button() == Qt::LeftButton) {
+            int pointIndex = findPointAtPosition(event->pos());
+
+            if (pointIndex >= 0) {
+                emit pointClicked(pointIndex);
+            } else {
+//                clearStatusBar();
+            }
+        }
     }
 
     QWidget::mousePressEvent(event);
@@ -247,13 +268,13 @@ void PlotWidget::wheelEvent(QWheelEvent *event)
 
 void PlotWidget::keyPressEvent(QKeyEvent *event)
 {
-    updateSelectionMode();
+//    updateSelectionMode();
     QWidget::keyPressEvent(event);
 }
 
 void PlotWidget::keyReleaseEvent(QKeyEvent *event)
 {
-    updateSelectionMode();
+//    updateSelectionMode();
     QWidget::keyReleaseEvent(event);
 }
 
@@ -390,7 +411,7 @@ void PlotWidget::drawPoints(QPainter &painter)
         QColor color = lastDataPoint.isNormalAlt ?m_normalAltColor : m_abnormalAltColor;
         painter.setPen(QPen(color, 1));
         painter.setBrush(QBrush(color));
-        painter.drawEllipse(lastScreenPos, 3, 3);
+        painter.drawEllipse(lastScreenPos, m_pointRadius, m_pointRadius);
     }
     for (int i = 1; i < m_dataPointData->points.size(); ++i) {
         const DataPoint& currentDataPoint = m_dataPointData->points[i];
@@ -400,7 +421,7 @@ void PlotWidget::drawPoints(QPainter &painter)
             QColor color = currentDataPoint.isNormalAlt ?m_normalAltColor : m_abnormalAltColor;
             painter.setPen(QPen(color, 1));
             painter.setBrush(QBrush(color));
-            painter.drawEllipse(currentScreenPos, 2, 2);
+            painter.drawEllipse(currentScreenPos, m_pointRadius, m_pointRadius);
         }
         if (lastDataPoint.isVisible && currentDataPoint.isVisible
                 && (lastDataPoint.fn + 20 > currentDataPoint.fn)
@@ -411,6 +432,25 @@ void PlotWidget::drawPoints(QPainter &painter)
         }
         lastDataPoint = currentDataPoint;
         lastScreenPos = currentScreenPos;
+    }
+}
+
+void PlotWidget::drawDesignLines(QPainter &painter)
+{
+    if (m_designLinesFile.size() < 1) return;
+    painter.setPen(QPen(m_designLineColor, 2));
+    painter.setBrush(QBrush(m_designLineColor));
+    for (const DesignLineFile& designLineFile : m_designLinesFile) {
+        // 只绘制可见的设计线
+        qDebug() << designLineFile.filePath;
+        if (!designLineFile.visible) continue;
+        for (const DesignLine& line : designLineFile.data) {
+            QPointF p1 = QPointF(line.x1, line.y1);
+            QPointF p2 = QPointF(line.x2, line.y2);
+            p1 = worldToScreen(p1);
+            p2 = worldToScreen(p2);
+            painter.drawLine(p1, p2);
+        }
     }
 }
 
@@ -513,19 +553,42 @@ bool PlotWidget::isPointSelected(const QPointF &point) const
     return false;
 }
 
-void PlotWidget::updateSelectionMode()
+int PlotWidget::findPointAtPosition(const QPointF &pos) const   //输入的pos是屏幕坐标
 {
-    QApplication *app = qobject_cast<QApplication*>(QApplication::instance());
-    Qt::KeyboardModifiers modifiers = app->keyboardModifiers();
+    for (int i = 0; i < m_dataPointData->points.size(); ++i) {
+        const DataPoint& point = m_dataPointData->points[i];
+        QPointF widgetPos = point.coordinate;
+        widgetPos = worldToScreen(widgetPos);
 
-    if (modifiers & Qt::ShiftModifier) {
-        m_selectionMode = Add;
-    } else if (modifiers & Qt::ControlModifier) {
-        m_selectionMode = Subtract;
-    } else {
-        m_selectionMode = Normal;
+        // 计算鼠标位置与数据点的距离
+        double distance = QLineF(pos, widgetPos).length();
+
+        if (distance <= m_clickTolerance) {
+            return i;
+        }
     }
+
+    return -1; // 未找到
 }
+
+void PlotWidget::setClickMode(ClickMode i)
+{
+    m_clickMode = i;
+}
+
+//void PlotWidget::updateSelectionMode()
+//{
+//    QApplication *app = qobject_cast<QApplication*>(QApplication::instance());
+//    Qt::KeyboardModifiers modifiers = app->keyboardModifiers();
+
+//    if (modifiers & Qt::ShiftModifier) {
+//        m_selectionMode = Add;
+//    } else if (modifiers & Qt::ControlModifier) {
+//        m_selectionMode = Subtract;
+//    } else {
+//        m_selectionMode = Normal;
+//    }
+//}
 
 //PolygonSelectionWidget::PolygonSelectionWidget(QWidget *parent)
 //    : QWidget(parent), m_isSelecting(false)
@@ -537,7 +600,7 @@ void PlotWidget::updateSelectionMode()
 //{
 //    m_points.clear();
 //    m_selectionPolygon.clear();
-////    m_isSelecting = false;
+//    m_isSelecting = false;
 //    update();
 //}
 

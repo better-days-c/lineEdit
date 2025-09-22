@@ -95,7 +95,7 @@ void ProjectTreeView::refreshTree() {
     designLinesRoot->setData(DesignLinesRootItem, Qt::UserRole);
     rootItem->appendRow(designLinesRoot);
 
-    // 测试线根节点
+    // 测线根节点
     QStandardItem* testLinesRoot = new QStandardItem("测线");
     testLinesRoot->setData(TestLinesRootItem, Qt::UserRole);
     rootItem->appendRow(testLinesRoot);
@@ -103,7 +103,7 @@ void ProjectTreeView::refreshTree() {
     // 填充设计线
     populateDesignLines();
 
-    // 填充测试线
+    // 填充测线
     populateTestLines();
 
     // 展开所有节点

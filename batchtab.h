@@ -40,12 +40,16 @@ public:
     // 应用列映射配置
     void applyColumnMapping(const ColumnMapping &mapping);
 
+    void startSelecting();
+    void endSelecting();
+
 public slots:
     void onSelectionChanged();
     void onColumnVisibilityChanged();
     void onAltThresholdChanged(double value);
     void zoomToFit();
     void clearSelection();
+    void updateSelectedPoint(int index);
 
 private:
     void setupUI();
@@ -55,6 +59,8 @@ private:
 
 private:
     DataPointData *m_dataPointData;
+    QList<DesignLineFile> m_designLinesFile;
+//    QList<DesignLine> *m_designLines;
     QString m_batchName;
 
     // UI组件
@@ -87,12 +93,15 @@ private:
     // 选择控制
     QPushButton *m_applySelectionBtn;
     QPushButton *m_clearSelectionBtn;
-    QPushButton *m_invertSelectionBtn;
+//    QPushButton *m_invertSelectionBtn;
+    QPushButton *m_startSelectingBtn;
+    QPushButton *m_endSelectingBtn;
 
     // 状态信息
     QLabel *m_pointCountLabel;
     QLabel *m_lineCountLabel;
     QLabel *m_selectionCountLabel;
+    QLabel *m_selectedPointLabel;
 
     ///
     int m_batchIndex;

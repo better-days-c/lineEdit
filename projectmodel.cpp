@@ -35,10 +35,10 @@ bool ProjectModel::loadProject(const QString& filePath) {
     lastModified = QDateTime::fromString(root["lastModified"].toString(), Qt::ISODate);
 
     // 加载设计线
-    m_designLines.clear();
+    m_designLinesFile.clear();
     QJsonArray designLinesArray = root["designLines"].toArray();
     for (const auto& item : designLinesArray) {
-        m_designLines.append(DesignLineFile::fromJson(item.toObject()));
+        m_designLinesFile.append(DesignLineFile::fromJson(item.toObject()));
     }
 
     // 加载架次
@@ -71,7 +71,7 @@ bool ProjectModel::saveProject(const QString& filePath) {
 
     // 保存设计线
     QJsonArray designLinesArray;
-    for (const auto& dlf : m_designLines) {
+    for (const auto& dlf : m_designLinesFile) {
         designLinesArray.append(dlf.toJson());
     }
     root["designLines"] = designLinesArray;
@@ -117,7 +117,7 @@ bool ProjectModel::validateProject() const
 //            return false;
 //        }
 //    }
-    for (const DesignLineFile& file : m_designLines){
+    for (const DesignLineFile& file : m_designLinesFile){
         QString absolutePath = file.filePath;
         if (QFileInfo(absolutePath).isRelative()){
             absolutePath = QDir(projectPath).absoluteFilePath(absolutePath);
@@ -146,7 +146,7 @@ QJsonObject DataPoint::toJson() const {
 DataPoint DataPoint::fromJson(const QJsonObject& json) {
     DataPoint point;
     point.lineId = json["LINE"].toString();
-    point.fn = json["FN"].toInt();
+    point.fn = json["FN"].toString().toInt();
     point.coordinate = QPointF(json["X"].toDouble(), json["Y"].toDouble());
     point.alt = json["RALT"].toDouble();
     point.isVisible = bool(json["Visible"].toInt());
@@ -260,7 +260,7 @@ bool ProjectModel::addDesignLineFile(const QString& filePath) {
 //    QString fileName = fileInfo.fileName();
 
     // 检查文件是否已添加
-    for (const auto& dlf : m_designLines) {
+    for (const auto& dlf : m_designLinesFile) {
         if (dlf.filePath == filePath) {
             QMessageBox::warning(nullptr, "重复导入",
                                  QString("设计线文件 [%1] 已经导入过了！").arg(filePath));
@@ -307,7 +307,7 @@ bool ProjectModel::addDesignLineFile(const QString& filePath) {
         qWarning() << "无法打开设计线文件:" << filePath;
     }
 
-    m_designLines.append(newFile);
+    m_designLinesFile.append(newFile);
 
     lastModified = QDateTime::currentDateTime();
     emit designLinesChanged();
@@ -316,8 +316,8 @@ bool ProjectModel::addDesignLineFile(const QString& filePath) {
 }
 
 bool ProjectModel::removeDesignLineFile(int index) {
-    if (index >= 0 && index < m_designLines.size()) {
-        m_designLines.removeAt(index);
+    if (index >= 0 && index < m_designLinesFile.size()) {
+        m_designLinesFile.removeAt(index);
         lastModified = QDateTime::currentDateTime();
         emit designLinesChanged();
         emit projectModified();
@@ -327,8 +327,8 @@ bool ProjectModel::removeDesignLineFile(int index) {
 }
 
 void ProjectModel::setDesignLineVisibility(int index, bool visible) {
-    if (index >= 0 && index < m_designLines.size()) {
-        m_designLines[index].visible = visible;
+    if (index >= 0 && index < m_designLinesFile.size()) {
+        m_designLinesFile[index].visible = visible;
         lastModified = QDateTime::currentDateTime();
         emit designLinesChanged();
         emit projectModified();
