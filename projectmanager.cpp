@@ -87,6 +87,9 @@ bool ProjectManager::saveProject()
     }
 
     if (m_currentProject->saveProject(m_currentProjectFile)) {
+        QFileInfo fileInfo(m_currentProjectFile);
+        QString filename = fileInfo.baseName(); // 返回文件名（不带扩展名）
+        m_currentProject->projectName = m_currentProjectFile;
         m_isModified = false;
         return true;
     } else {

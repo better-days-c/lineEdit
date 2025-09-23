@@ -91,6 +91,7 @@ private:
     QAction *m_aboutAction;
     QAction *m_zoomToFitAction;
     QAction *m_clearSelectionAction;
+    QAction *m_resetAction;
 
     void createActions();
     void setupUI();

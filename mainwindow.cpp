@@ -167,6 +167,10 @@ void MainWindow::setupMenuBar()
 //    m_zoomToFitAction->setEnabled(false);
     viewMenu->addAction(m_zoomToFitAction);
 
+    m_resetAction = new QAction("重置数据", this);
+    m_resetAction->setStatusTip("还原所有数据点");
+    viewMenu->addAction(m_resetAction);
+
     m_clearSelectionAction = new QAction("清除选择(&C)", this);
     m_clearSelectionAction->setStatusTip("清除所有选择区域");
     m_clearSelectionAction->setEnabled(false);
@@ -183,7 +187,8 @@ void MainWindow::setupToolBar()
 //    mainToolBar->addAction(m_saveAction);
     mainToolBar->addSeparator();
     mainToolBar->addAction(m_zoomToFitAction);
-    mainToolBar->addAction(m_clearSelectionAction);
+//    mainToolBar->addAction(m_clearSelectionAction);
+    mainToolBar->addAction(m_resetAction);
 }
 
 void MainWindow::setupStatusBar()
@@ -212,6 +217,13 @@ void MainWindow::createActions()
         BatchTab *currentTab = getCurrentTab();
         if (currentTab) {
             currentTab->clearSelection();
+        }
+    });
+
+    connect(m_resetAction, &QAction::triggered, [this]() {
+        BatchTab *currentTab = getCurrentTab();
+        if (currentTab) {
+            currentTab->resetDataPoints();
         }
     });
 }

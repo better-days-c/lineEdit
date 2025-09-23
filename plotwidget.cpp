@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QRubberBand>
 #include <qmath.h>
+#include <QInputDialog>
 
 PlotWidget::PlotWidget(QWidget *parent)
     : QWidget(parent)
@@ -18,11 +19,13 @@ PlotWidget::PlotWidget(QWidget *parent)
     , m_selectionColor(QColor(255, 255, 0, 100))
     , m_lineSegmentColor(Qt::darkGray)
     , m_designLineColor(Qt::lightGray)
+    , m_highlightColor(Qt::yellow)
     , m_isSelecting(false)
 {
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
     m_rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
+    connect(this, &PlotWidget::pointDoubleClicked, this, &PlotWidget::highlightLine);
 }
 
 void PlotWidget::setBatchData(DataPointData *data)
@@ -99,7 +102,7 @@ void PlotWidget::paintEvent(QPaintEvent *event)
         return;
 
     // 绘制网格
-    drawGrid(painter);
+//    drawGrid(painter);
 
     drawDesignLines(painter);
 
@@ -117,6 +120,8 @@ void PlotWidget::paintEvent(QPaintEvent *event)
          updatePointsCache();
          m_pointsDirty = false;
      }
+
+     drawHighlightPoints(painter);
 
      // 合成所有图层
      painter.drawPixmap(0, 0, m_pointsCache);
@@ -174,7 +179,7 @@ void PlotWidget::mousePressEvent(QMouseEvent *event)
             m_vertices.append(event->pos());
             update();
         }
-        else if (event->button() == Qt::RightButton && m_isSelecting) {
+        else if (event->button() == Qt::RightButton) {
         // 右键取消选区
             clearSelection();
         }
@@ -287,18 +292,69 @@ void PlotWidget::resizeEvent(QResizeEvent *event)
 
 void PlotWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton && m_isSelecting && m_vertices.size() >= 3) {
-        //双击完成多边形
+    if (m_clickMode == Select) {
+        if (event->button() == Qt::LeftButton && m_isSelecting && m_vertices.size() >= 3) {
+            //双击完成多边形
 
-        m_selectionPolygon_screen = QPolygonF(m_vertices);
-        for(QPointF &point : m_vertices)
-        {
-            point = screenToWorld(point);
+            m_selectionPolygon_screen = QPolygonF(m_vertices);
+            for(QPointF &point : m_vertices)
+            {
+                point = screenToWorld(point);
+            }
+            m_selectionPolygon_world = QPolygonF(m_vertices);
+            m_isSelecting = false;
+            emit selectionCompleted(m_selectionPolygon_screen);
+            update();
         }
-        m_selectionPolygon_world = QPolygonF(m_vertices);
-        m_isSelecting = false;
-        emit selectionCompleted(m_selectionPolygon_screen);
-        update();
+
+    }
+    else {
+        if (event->button() == Qt::LeftButton) {
+            int pointIndex = findPointAtPosition(event->pos());
+
+            if (pointIndex >= 0) {
+                QString lineId = m_dataPointData->points[pointIndex].lineId;
+                emit pointDoubleClicked(lineId);
+            } else {
+//                clearStatusBar();
+            }
+        }
+    }
+}
+
+void PlotWidget::highlightLine(QString originalLineId)
+{
+    for (int i = 0; i < m_dataPointData->points.size(); i++) {
+        const DataPoint& currentDataPoint = m_dataPointData->points[i];
+        if (currentDataPoint.isVisible && currentDataPoint.lineId == originalLineId) {
+            highlightPoints.append(currentDataPoint);
+        }
+    }
+    update();
+    bool ok;
+    QString newLineId = QInputDialog::getText(
+        nullptr,                    // 父窗口（nullptr 为无父窗口）
+        "输入线号",                 // 对话框标题
+        "请输入新线号(示例：L1111)：",         // 标签提示
+        QLineEdit::Normal,         // 输入框类型
+        originalLineId,                        // 默认文本
+        &ok                        // 记录用户是否点击“确定”
+    );
+    // 检查用户是否点击“确定”并记录输入
+    if (ok && !newLineId.isEmpty()) {
+        emit changeLineId(originalLineId, newLineId);
+    }
+    highlightPoints.clear();
+    update();
+}
+
+void PlotWidget::drawHighlightPoints(QPainter &painter)
+{
+    for (DataPoint& point : highlightPoints) {
+        QPointF screenPos = worldToScreen(point.coordinate);
+        painter.setPen(QPen(m_highlightColor, 1));
+        painter.setBrush(QBrush(m_highlightColor));
+        painter.drawEllipse(screenPos, m_pointRadius+4, m_pointRadius+4);
     }
 }
 

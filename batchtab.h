@@ -61,7 +61,9 @@ public slots:
     void onAltThresholdChanged(double value);
     void zoomToFit();
     void clearSelection();
+    void resetDataPoints();
     void updateSelectedPoint(int index);
+    void onChangeLineId(QString originalLineId, QString newLineId);
 
 private:
     void setupUI();

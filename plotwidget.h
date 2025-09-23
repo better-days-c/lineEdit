@@ -56,12 +56,16 @@ public:
     // 更新点击模式
     void setClickMode(ClickMode i);
 
+    bool m_pointsDirty = true;
+
 signals:
     void selectionChanged();
     void pointsSelected(const QVector<int>& indices);
     void selectionCompleted(const QPolygonF &polygon);
     void pointClicked(int index);
     void pointHovered(int index, const DataPoint& point);
+    void pointDoubleClicked(QString lineId);
+    void changeLineId(QString originalLineId, QString newLineId);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -76,6 +80,7 @@ protected:
 
 private slots:
 //    void onRubberBandChanged(const QRect &selection);
+    void highlightLine(QString lineId);
 
 private:
     DataPointData *m_dataPointData;
@@ -99,6 +104,7 @@ private:
     QColor m_selectionColor;     // 选择区域颜色
     QColor m_lineSegmentColor;  // 可见线段颜色
     QColor m_designLineColor;   // 设计线颜色
+    QColor m_highlightColor;
 
     QVector<QPointF> m_vertices; //多边形顶点
     QPoint m_currentPoint;  //当前鼠标位置
@@ -107,13 +113,14 @@ private:
     QPolygonF m_selectionPolygon_world;
 
     QPixmap m_pointsCache;      // 缓存数据点
-    bool m_pointsDirty = true;
 
     QStatusBar* m_statusBar = nullptr;
 
     // 绘制和查找参数
     double m_pointRadius = 2.0;     // 数据点半径
     double m_clickTolerance = 4.0;   // 点击容差（像素）
+
+    QList<DataPoint> highlightPoints;
 
     // 辅助函数
     QPointF worldToScreen(const QPointF &worldPoint) const;
@@ -123,6 +130,7 @@ private:
     void updateDataRect();
 //    void drawLines(QPainter &painter);
     void drawPoints(QPainter &painter);
+    void drawHighlightPoints(QPainter &painter);
 //    void drawSelectionRegions(QPainter &painter);
     void drawGrid(QPainter &painter);
 

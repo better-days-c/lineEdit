@@ -61,6 +61,7 @@ void BatchTab::setupUI()
 
     // 连接信号
     connect(m_plotWidget, &PlotWidget::selectionChanged, this, &BatchTab::onSelectionChanged);
+    connect(m_plotWidget, &PlotWidget::changeLineId, this, &BatchTab::onChangeLineId);
 }
 
 void BatchTab::setupControlPanel()
@@ -79,7 +80,7 @@ void BatchTab::setupControlPanel()
     m_showXCoordCheck->setChecked(true);
     m_showYCoordCheck = new QCheckBox("Y坐标", this);
     m_showYCoordCheck->setChecked(true);
-    m_showQualityCheck = new QCheckBox("飞行高度", this);
+    m_showQualityCheck = new QCheckBox("雷达高度", this);
     m_showQualityCheck->setChecked(true);
 
     columnLayout->addWidget(m_showLineNumberCheck);
@@ -138,28 +139,31 @@ void BatchTab::setupControlPanel()
     QVBoxLayout *selectionLayout = new QVBoxLayout(m_selectionControlGroup);
 
     QHBoxLayout *startEndSelectingLayout = new QHBoxLayout();
-    m_startSelectingBtn = new QPushButton("开始选择", this);
-    m_endSelectingBtn = new QPushButton("结束选择", this);
+    m_startSelectingBtn = new QPushButton("开始选区模式", this);
+    m_endSelectingBtn = new QPushButton("结束选区模式", this);
     m_endSelectingBtn->setEnabled(false);
     startEndSelectingLayout->addWidget(m_startSelectingBtn);
     startEndSelectingLayout->addWidget(m_endSelectingBtn);
     selectionLayout->addLayout(startEndSelectingLayout);
 
-    m_clearSelectionBtn = new QPushButton("清除选择", this);
+//    m_clearSelectionBtn = new QPushButton("清除选择", this);
     m_applySelectionBtn = new QPushButton("应用选区", this);
 //    m_invertSelectionBtn = new QPushButton("反转选择", this);
-    m_assignLineNumberBtn = new QPushButton("设置线号", this);
+    m_assignLineNumberBtn = new QPushButton("匹配线号", this);
 
-    selectionLayout->addWidget(m_clearSelectionBtn);
+//    selectionLayout->addWidget(m_clearSelectionBtn);
     selectionLayout->addWidget(m_applySelectionBtn);
 //    selectionLayout->addWidget(m_invertSelectionBtn);
     selectionLayout->addWidget(m_assignLineNumberBtn);
 
     connect(m_applySelectionBtn, &QPushButton::clicked, this, &BatchTab::applySelection);
-    connect(m_clearSelectionBtn, &QPushButton::clicked, this, &BatchTab::clearSelection);
+//    connect(m_clearSelectionBtn, &QPushButton::clicked, this, &BatchTab::clearSelection);
     connect(m_startSelectingBtn, &QPushButton::clicked, this, &BatchTab::startSelecting);
     connect(m_endSelectingBtn, &QPushButton::clicked, this, &BatchTab::endSelecting);
     connect(m_assignLineNumberBtn, &QPushButton::clicked, this, &BatchTab::matchLineNumber);
+
+    // 通过卡点号来删
+
 
     // 状态信息
     QGroupBox *statusGroup = new QGroupBox("状态信息", this);
@@ -298,6 +302,21 @@ void BatchTab::zoomToFit()
 void BatchTab::clearSelection()
 {
     m_plotWidget->clearSelection();
+}
+
+void BatchTab::resetDataPoints()
+{
+    qDebug() << "reset";
+    Batch& batch = getBatch();
+    for (DataPoint& point : batch.points) {
+        point.isVisible = true;
+    }
+    for (DataPoint& point : m_dataPointData->points) {
+        point.isVisible = true;
+    }
+    m_plotWidget->m_pointsDirty = true;
+    m_plotWidget->update();
+    syncModel();
 }
 
 QVector<int> BatchTab::getSelectedPointIndices() const
@@ -441,6 +460,36 @@ void BatchTab::matchLineNumber()
             lineNumberNowleft = closestLine->lineName;
             lineNumberNowleft = lineNumberNowleft.left(lineNumberNowleft.size()-1);
             point.lineId = lineNumberNowleft + QString::number(closestLine->matchTimes);
+        }
+    }
+    syncModel();
+}
+
+void BatchTab::onChangeLineId(QString originalLineId, QString newLineId)
+{
+    qDebug() << "o:" << originalLineId << " n:"  << newLineId;
+    QList<DesignLineFile>& designLinesFile = m_projectModel->getDesignLines();
+    Batch& batch = m_projectModel->getBatches()[m_batchIndex];
+    if (batch.relatedLines.size()) {
+        for (DesignLineFile& designLineFile : designLinesFile) {
+            QList<DesignLine>& data = designLineFile.data;
+            for (DesignLine& line : data){
+                if (line.lineName.left(line.lineName.length()-1)
+                        == originalLineId.left(originalLineId.length()-1)) {
+                    line.matchTimes--;
+                    batch.relatedLines.removeOne(originalLineId);
+                }
+                if (line.lineName.left(line.lineName.length()-1)
+                        == newLineId.left(newLineId.length()-1)){
+                    line.matchTimes++;
+                    batch.relatedLines.append(newLineId);
+                }
+            }
+        }
+    }
+    for (DataPoint& point : m_dataPointData->points) {
+        if (point.lineId == originalLineId) {
+            point.lineId = newLineId;
         }
     }
     syncModel();

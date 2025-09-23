@@ -172,7 +172,7 @@ DesignLine DesignLine::fromJson(const QJsonObject& json) {
     dl.y1 = json["Y1"].toDouble();
     dl.x2 = json["X2"].toDouble();
     dl.y2 = json["Y2"].toDouble();
-    dl.matchTimes = json["MatchTimes"].toString().toInt();
+    dl.matchTimes = json["MatchTimes"].toInt();
     return dl;
 }
 

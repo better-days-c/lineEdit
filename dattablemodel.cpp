@@ -18,7 +18,7 @@ DatTableModel::DatTableModel(QObject *parent)
 void DatTableModel::initHeaders()
 {
     m_headers.clear();
-    m_headers << "线号" << "点号" << "X坐标" << "Y坐标" << "偏航";
+    m_headers << "线号" << "点号" << "X坐标" << "Y坐标" << "雷达高度";
 }
 
 int DatTableModel::rowCount(const QModelIndex &parent) const
