@@ -44,6 +44,7 @@ private slots:
     void onTabChanged(int index);
 //    void saveCurrentFile();
     void exportCurrentFile();
+    bool writeDatFile(const QString& originalPath, const QString& newPath, const Batch& currentBatch);
 //    void about();
     void onProjectNewed();
     void onProjectModified();

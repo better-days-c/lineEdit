@@ -442,7 +442,6 @@ void PlotWidget::drawDesignLines(QPainter &painter)
     painter.setBrush(QBrush(m_designLineColor));
     for (const DesignLineFile& designLineFile : m_designLinesFile) {
         // 只绘制可见的设计线
-        qDebug() << designLineFile.filePath;
         if (!designLineFile.visible) continue;
         for (const DesignLine& line : designLineFile.data) {
             QPointF p1 = QPointF(line.x1, line.y1);
@@ -450,6 +449,7 @@ void PlotWidget::drawDesignLines(QPainter &painter)
             p1 = worldToScreen(p1);
             p2 = worldToScreen(p2);
             painter.drawLine(p1, p2);
+            painter.drawText(p2, line.lineName);
         }
     }
 }

@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <datastructures.h>
+#include <QDebug>
 
 // 设计线文件结构
 struct DesignLineFile {
@@ -58,7 +59,7 @@ public:
     // 设计线相关操作
     bool addDesignLineFile(const QString& filePath);
     bool removeDesignLineFile(int index);
-    QList<DesignLineFile>& getDesignLines() { return m_designLinesFile; }
+    QList<DesignLineFile>& getDesignLines() { return m_designLinesFile;}
     void setDesignLineVisibility(int index, bool visible);
 
     // 测试架次相关操作

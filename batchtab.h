@@ -19,6 +19,7 @@ public:
 
     DataPointData* getDataPointData() const { return m_dataPointData; }
     QString getBatchName() const { return m_batchName; }
+    Batch& getBatch() const { return m_projectModel->getBatches()[m_batchIndex]; }
 
     ///
     void setProjectModel(ProjectModel* model);
@@ -43,6 +44,17 @@ public:
     void startSelecting();
     void endSelecting();
 
+    ///为单个线段匹配线号
+    void matchLineNumber();
+
+    double distanceBetweenPoints(double x1, double y1, double x2, double y2);
+
+    double pointToLineSegmentDistance(const QPointF& point, const DesignLine& line);
+
+    std::pair<DesignLine*, double> findClosestLineWithDistance(const QPointF& point, QList<DesignLine>& lines);
+
+    void syncModel();
+
 public slots:
     void onSelectionChanged();
     void onColumnVisibilityChanged();
@@ -59,7 +71,7 @@ private:
 
 private:
     DataPointData *m_dataPointData;
-    QList<DesignLineFile> m_designLinesFile;
+//    QList<DesignLineFile>& m_designLinesFile;
 //    QList<DesignLine> *m_designLines;
     QString m_batchName;
 
@@ -96,6 +108,7 @@ private:
 //    QPushButton *m_invertSelectionBtn;
     QPushButton *m_startSelectingBtn;
     QPushButton *m_endSelectingBtn;
+    QPushButton *m_assignLineNumberBtn;
 
     // 状态信息
     QLabel *m_pointCountLabel;

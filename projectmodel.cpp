@@ -156,7 +156,7 @@ DataPoint DataPoint::fromJson(const QJsonObject& json) {
 // DesignLine设计线段结构实现
 QJsonObject DesignLine::toJson() const {
     QJsonObject json;
-    json["Line"] = line;
+    json["Line"] = lineName;
     json["X1"] = x1;
     json["Y1"] = y1;
     json["X2"] = x2;
@@ -167,7 +167,7 @@ QJsonObject DesignLine::toJson() const {
 
 DesignLine DesignLine::fromJson(const QJsonObject& json) {
     DesignLine dl;
-    dl.line = json["Line"].toString();
+    dl.lineName = json["Line"].toString();
     dl.x1 = json["X1"].toDouble();
     dl.y1 = json["Y1"].toDouble();
     dl.x2 = json["X2"].toDouble();
@@ -291,7 +291,7 @@ bool ProjectModel::addDesignLineFile(const QString& filePath) {
             QStringList parts2 = line2.split(QRegExp("\\s+"), QString::SkipEmptyParts);
             if (parts1.size() == 5) {
                 DesignLine dl;
-                dl.line = parts1[0].trimmed();
+                dl.lineName = parts1[0].trimmed();
                 dl.x1 = parts1[1].trimmed().toDouble();
                 dl.y1 = parts1[2].trimmed().toDouble();
                 dl.x2 = parts2[1].trimmed().toDouble();

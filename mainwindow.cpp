@@ -68,7 +68,7 @@ void MainWindow::setupUI()
     QSplitter* mainSplitter = new QSplitter(Qt::Horizontal, this);
     mainSplitter->addWidget(m_treeView);
     mainSplitter->addWidget(m_tabWidget);
-    mainSplitter->setSizes(QList<int>() << 300 << 700);
+    mainSplitter->setSizes(QList<int>() << 200 << 700);
 
     setCentralWidget(mainSplitter);
 
@@ -389,7 +389,7 @@ void MainWindow::closeCurrentTab()
 //            m_saveAction->setEnabled(false);
             m_exportAction->setEnabled(false);
             m_closeAction->setEnabled(false);
-            m_zoomToFitAction->setEnabled(false);
+//            m_zoomToFitAction->setEnabled(false);
             m_clearSelectionAction->setEnabled(false);
 
             m_statusLabel->setText("就绪");
@@ -420,18 +420,125 @@ void MainWindow::exportCurrentFile()
     if (!currentTab)
         return;
 
-    QString fileName = QFileDialog::getSaveFileName(
-        this,
-        "导出数据",
-        currentTab->getBatchName() + "_export.csv",
-        "CSV文件 (*.csv);;DAT文件 (*.dat);;所有文件 (*)"
+//    QString fileName = QFileDialog::getSaveFileName(
+//        this,
+//        "导出数据",
+//        currentTab->getBatchName() + "_export.csv",
+//        "CSV文件 (*.csv);;DAT文件 (*.dat);;所有文件 (*)"
+//    );
+
+    QString selectedPath = QFileDialog::getExistingDirectory(
+        nullptr,
+        tr("选择导出文件夹路径"),
+        QDir::homePath(),
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
 
-    if (fileName.isEmpty())
+    if (selectedPath.isEmpty()) {
+        // 用户取消了选择
         return;
+    }
 
-    /// TODO: 实现导出功能
-    QMessageBox::information(this, "提示", "导出功能待实现");
+    // 用户输入文件夹名称
+    bool ok;
+    QString folderName = QInputDialog::getText(
+        nullptr,
+        tr("输入文件夹名称"),
+        tr("请输入新文件夹的名称:"),
+        QLineEdit::Normal,
+        "exported_files",
+        &ok
+    );
+
+    if (!ok || folderName.isEmpty()) {
+        // 用户取消或未输入有效名称
+        return;
+    }
+
+    // 创建目标文件夹
+    QDir dir(selectedPath);
+    QString newFolderPath = dir.filePath(folderName);
+    if (!dir.exists(folderName)) {
+        if (!dir.mkdir(folderName)) {
+            QMessageBox::critical(
+                nullptr,
+                tr("错误"),
+                tr("无法创建文件夹: %1").arg(newFolderPath)
+            );
+            return;
+        }
+    }
+
+    Batch& currentBatch = currentTab->getBatch();
+
+    for (int i = 0; i < currentBatch.filePaths.size(); i++) {
+        QString& originalPath = currentBatch.filePaths[i];
+        QFileInfo fileInfo(originalPath);
+        QString originalName = fileInfo.baseName();
+        QString newPath = QDir(newFolderPath).filePath(originalName + "_cut.dat");
+
+        if (!writeDatFile(originalPath, newPath, currentBatch)) {
+            QMessageBox::critical(
+                nullptr,
+                tr("错误"),
+                tr("无法写入文件: %1").arg(newPath)
+            );
+            return;
+        }
+    }
+
+    // 成功提示
+    QMessageBox::information(
+        nullptr,
+        tr("成功"),
+        tr("文件已成功导出到: %1").arg(newFolderPath)
+                );
+}
+
+bool MainWindow::writeDatFile(const QString &originalPath, const QString &newPath, const Batch &currentBatch)
+{
+    QFile newfile(newPath);
+    if (!newfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return false;
+    }
+    QTextStream out(&newfile);
+    out.setCodec("UTF-8");
+//    out << content;
+
+    QFile originalFile(originalPath);
+    if (!originalFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(nullptr, "错误", "无法打开文件 ");
+        return false;
+    }
+    QTextStream in(&originalFile);
+    in.setCodec("UTF-8");
+    QStringList previewData;
+    QString lastLine;
+
+    // 跳过头部
+    while (!in.atEnd()) {
+        lastLine = in.readLine();
+        out << lastLine;
+        out << "\n";
+        if (lastLine.trimmed().split(' ', QString::SkipEmptyParts)[0] == "LINE")
+            break;
+    }
+    int i = 0;
+    DataPoint point = currentBatch.points[i];
+    while (!in.atEnd()){
+        QString line = in.readLine();
+        if (point.isVisible) {
+            QString newLineId = point.lineId;
+            line.replace(0, newLineId.size(), newLineId);
+            out << line;
+            out << "\n";
+        }
+        i++;
+        if (i < currentBatch.points.size()) point = currentBatch.points[i];
+    }
+    originalFile.close();
+
+    return true;
 }
 
 //dataPointData* MainWindow::loadDatFile(const QString &fileName, int skipLines)
@@ -565,7 +672,7 @@ void MainWindow::openTabWidget(int batchIndex) {
     const auto& batches = m_projectManager->currentProject()->getBatches();
     if (batchIndex < 0 || batchIndex >= batches.size()) return;
     BatchTab* tabWidget = new BatchTab(batchIndex, this, m_projectManager->currentProject());
-    tabWidget->setProjectModel(m_projectManager->currentProject());
+//    tabWidget->setProjectModel(m_projectManager->currentProject());
 
     m_tabWidget->addTab(tabWidget, batches[batchIndex].batchName);
     m_tabWidget->setCurrentWidget(tabWidget);

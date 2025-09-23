@@ -26,12 +26,12 @@ struct DataPoint {
 
 // 设计线结构
 struct DesignLine {
-    QString line;
+    QString lineName;
     double x1;
     double y1;
     double x2;
     double y2;
-    double matchTimes = 0;
+    int matchTimes = 0;
 
     QJsonObject toJson() const;
     static DesignLine fromJson(const QJsonObject& json);
@@ -49,7 +49,7 @@ struct LineSegment {
 
 class DataPointData{
 public:
-    QVector<DataPoint> points;              // 所有数据点
+    QList<DataPoint> points;              // 所有数据点
     QHash<QString, QVector<int>> lineMap;   // 线号到点索引的映射，<线号, [fn1, fn2, ...]>
     QString batchName;                       // 文件名
     double lowAltThreshold;                 // 高度下阈
@@ -91,6 +91,8 @@ public:
     bool isNormalAlt(double alt) const{
         return (alt >= lowAltThreshold) && (alt <= highAltThreshold);
     }
+
+
 private:
 
 };

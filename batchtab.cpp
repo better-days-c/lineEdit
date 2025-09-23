@@ -1,5 +1,6 @@
 #include "batchtab.h"
 #include <QMessageBox>
+//using namespace std;
 
 BatchTab::BatchTab(int batchIndex, QWidget *parent, ProjectModel *projectModel)
     : QWidget(parent)
@@ -12,7 +13,6 @@ BatchTab::BatchTab(int batchIndex, QWidget *parent, ProjectModel *projectModel)
     , m_projectModel(nullptr)
 {
     m_dataPointData = new DataPointData;
-//    m_designLines = new QList<DesignLine>;
     setProjectModel(projectModel);
     setupUI();
     setupControlPanel();
@@ -28,7 +28,7 @@ void BatchTab::setupUI()
     // 创建绘图组件
     m_plotWidget = new PlotWidget(this);
     m_plotWidget->setBatchData(m_dataPointData);
-    m_plotWidget->setDesignLinesFile(m_designLinesFile);
+    m_plotWidget->setDesignLinesFile(m_projectModel->getDesignLines());
 
     // 创建右侧分割器（垂直）
     m_rightSplitter = new QSplitter(Qt::Vertical, this);
@@ -41,7 +41,7 @@ void BatchTab::setupUI()
 
     // 创建控制面板
     m_controlPanel = new QWidget(this);
-    m_controlPanel->setMaximumWidth(400);
+    m_controlPanel->setMaximumWidth(800);
     m_controlPanel->setMinimumWidth(250);
 
     // 组装UI
@@ -148,15 +148,18 @@ void BatchTab::setupControlPanel()
     m_clearSelectionBtn = new QPushButton("清除选择", this);
     m_applySelectionBtn = new QPushButton("应用选区", this);
 //    m_invertSelectionBtn = new QPushButton("反转选择", this);
+    m_assignLineNumberBtn = new QPushButton("设置线号", this);
 
     selectionLayout->addWidget(m_clearSelectionBtn);
     selectionLayout->addWidget(m_applySelectionBtn);
 //    selectionLayout->addWidget(m_invertSelectionBtn);
+    selectionLayout->addWidget(m_assignLineNumberBtn);
 
     connect(m_applySelectionBtn, &QPushButton::clicked, this, &BatchTab::applySelection);
     connect(m_clearSelectionBtn, &QPushButton::clicked, this, &BatchTab::clearSelection);
     connect(m_startSelectingBtn, &QPushButton::clicked, this, &BatchTab::startSelecting);
     connect(m_endSelectingBtn, &QPushButton::clicked, this, &BatchTab::endSelecting);
+    connect(m_assignLineNumberBtn, &QPushButton::clicked, this, &BatchTab::matchLineNumber);
 
     // 状态信息
     QGroupBox *statusGroup = new QGroupBox("状态信息", this);
@@ -192,7 +195,6 @@ void BatchTab::setProjectModel(ProjectModel *model) {
         m_dataPointData->addPoint(point);
     }
     m_batchName = m_projectModel->getBatches()[m_batchIndex].batchName;
-    m_designLinesFile = m_projectModel->getDesignLines();
 }
 
 void BatchTab::updateStatusInfo()
@@ -260,7 +262,6 @@ void BatchTab::onAltThresholdChanged(double value)
     }
     else
         QMessageBox::warning(this, "错误", "无效的高度阈值设置！");
-    qDebug() << "onALtThresholdChanged";
 }
 
 //void DatFileTab::deleteLowQualityPoints()
@@ -280,12 +281,13 @@ void BatchTab::applySelection()
 //    }
     m_dataPointData->hideByRegion(m_plotWidget->getSelection(), false);
 
-    m_dataPointData->regenerateLineNumbers();
+//    m_dataPointData->regenerateLineNumbers();
     m_tableModel->refreshVisibleRows();
     m_plotWidget->invalidatePoints();
 //    m_plotWidget->update();
     updateStatusInfo();
     m_plotWidget->clearSelection();
+    syncModel();
 }
 
 void BatchTab::zoomToFit()
@@ -358,4 +360,138 @@ void BatchTab::endSelecting()
     m_plotWidget->setClickMode(PlotWidget::Normal);
     m_endSelectingBtn->setEnabled(false);
     m_startSelectingBtn->setEnabled(true);
+}
+
+void BatchTab::matchLineNumber()
+{
+    //如果batchObj(this)->MatchedLines不为空，则说明之前执行过匹配，需要进行清除操作
+    //清除操作：先获取fn对应的线号s，遍历每个designObj: designObj->data->LineObj:{ if Line==l(前三位相同） MatchTimes--}
+    //清除操作：batchObj(this)->MatchedLines清空
+
+    //计算与该点最近的线号
+
+    //为designObj: designObj->data->LineObj的MatchTimes++; batchObj(this)->MatchedLines append该线号string
+
+    QList<DesignLineFile>& designLinesFile = m_projectModel->getDesignLines();
+    Batch& batch = m_projectModel->getBatches()[m_batchIndex];
+    if (batch.relatedLines.size()) {
+        for (DesignLineFile& designLineFile : designLinesFile) {
+            QList<DesignLine>& data = designLineFile.data;
+            for (DesignLine& line : data){
+                QString designLineName = line.lineName;
+//                if (batch.relatedLines.contains(line.lineName)){
+//                    line.matchTimes--;
+//                    batch.relatedLines.removeOne()
+                for (QString& relatedLine : batch.relatedLines) {
+                    if (relatedLine.left(relatedLine.length()-1)
+                            == designLineName.left(designLineName.length()-1)) {
+                        line.matchTimes--;
+                        batch.relatedLines.removeOne(relatedLine);
+                    }
+                }
+            }
+        }
+    }
+
+    QString lineNumberNowleft;
+    DesignLine* closestLine = nullptr;
+    for (int i = 0; i < m_dataPointData->points.size(); i++) {
+        DataPoint& point = m_dataPointData->points[i];
+        if (i == 0 && point.isVisible){ // 整个架次的第一个点，如果可见的话就先计算它的线号吧
+            double minDistance;
+            for (int j = 0; j < designLinesFile.size(); j++) {
+                DesignLineFile& designLineFile = designLinesFile[j];
+                QList<DesignLine>& data = designLineFile.data;
+                auto result = findClosestLineWithDistance(point.coordinate, data);
+                if (j == 0) {
+                    minDistance = result.second;
+                    closestLine = result.first;
+                }
+                else if (result.second < minDistance) {
+                    minDistance = result.second;
+                    closestLine = result.first;
+                }
+            }
+            lineNumberNowleft = closestLine->lineName;
+            lineNumberNowleft = lineNumberNowleft.left(lineNumberNowleft.size()-1);
+            point.lineId = lineNumberNowleft + QString::number(closestLine->matchTimes);
+        }
+        else if (m_dataPointData->points[i-1].isVisible && point.isVisible) {
+            point.lineId = lineNumberNowleft + QString::number(closestLine->matchTimes);
+        }
+        else if (m_dataPointData->points[i-1].isVisible && !point.isVisible) {
+            closestLine->matchTimes++;  // 设计线的匹配次数++
+            batch.relatedLines.append(closestLine->lineName);   //将这段赋的线号记录到架次匹配记录中
+        }
+        else if (point.isVisible) {
+            double minDistance;
+            for (int j = 0; j < designLinesFile.size(); j++) {
+                DesignLineFile& designLineFile = designLinesFile[j];
+                QList<DesignLine>& data = designLineFile.data;
+                auto result = findClosestLineWithDistance(point.coordinate, data);
+                if (j == 0) {
+                    minDistance = result.second;
+                    closestLine = result.first;
+                }
+                else if (result.second < minDistance) {
+                    minDistance = result.second;
+                    closestLine = result.first;
+                }
+            }
+            lineNumberNowleft = closestLine->lineName;
+            lineNumberNowleft = lineNumberNowleft.left(lineNumberNowleft.size()-1);
+            point.lineId = lineNumberNowleft + QString::number(closestLine->matchTimes);
+        }
+    }
+    syncModel();
+}
+
+double BatchTab::distanceBetweenPoints(double x1, double y1, double x2, double y2)
+{
+    return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+}
+
+double BatchTab::pointToLineSegmentDistance(const QPointF &point, const DesignLine &line)
+{
+    double px = point.x();
+    double py = point.y();
+    double x1 = line.x1, y1 = line.y1;
+    double x2 = line.x2, y2 = line.y2;
+
+    // 如果线段退化为点
+    if (x1 == x2 && y1 == y2) {
+        return sqrt(pow(x1 - px, 2) + pow(y1 - py, 2));
+    }
+
+    // 计算分子：|(x2-x1)(y1-y0) - (x1-x0)(y2-y1)|
+    double numerator = std::abs((x2 - x1) * (y1 - py) - (x1 - px) * (y2 - y1));
+
+    // 计算分母：线段长度的平方根
+    double denominator = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+
+    return numerator / denominator;
+}
+
+std::pair<DesignLine*, double> BatchTab::findClosestLineWithDistance(const QPointF& point, QList<DesignLine>& lines)
+{
+    if (lines.isEmpty()) {
+        qDebug() << "线段列表为空";
+    }
+
+    DesignLine* closestLine = &(lines.first());
+    double minDistance = pointToLineSegmentDistance(point, *closestLine);
+
+    for (int i = 1; i < lines.size(); ++i) {
+        double distance = pointToLineSegmentDistance(point, lines[i]);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestLine = &lines[i];
+        }
+    }
+    return {closestLine, minDistance};
+}
+
+void BatchTab::syncModel()
+{
+    m_projectModel->m_batches[m_batchIndex].points = m_dataPointData->points;
 }
