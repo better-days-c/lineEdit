@@ -1,5 +1,6 @@
 #include "batchtab.h"
 #include <QMessageBox>
+#include <cmath>
 //using namespace std;
 
 BatchTab::BatchTab(int batchIndex, QWidget *parent, ProjectModel *projectModel)
@@ -306,7 +307,6 @@ void BatchTab::clearSelection()
 
 void BatchTab::resetDataPoints()
 {
-    qDebug() << "reset";
     Batch& batch = getBatch();
     for (DataPoint& point : batch.points) {
         point.isVisible = true;
@@ -390,7 +390,6 @@ void BatchTab::matchLineNumber()
     //计算与该点最近的线号
 
     //为designObj: designObj->data->LineObj的MatchTimes++; batchObj(this)->MatchedLines append该线号string
-
     QList<DesignLineFile>& designLinesFile = m_projectModel->getDesignLines();
     Batch& batch = m_projectModel->getBatches()[m_batchIndex];
     if (batch.relatedLines.size()) {
@@ -411,7 +410,6 @@ void BatchTab::matchLineNumber()
             }
         }
     }
-
     QString lineNumberNowleft;
     DesignLine* closestLine = nullptr;
     for (int i = 0; i < m_dataPointData->points.size(); i++) {
@@ -435,14 +433,17 @@ void BatchTab::matchLineNumber()
             lineNumberNowleft = lineNumberNowleft.left(lineNumberNowleft.size()-1);
             point.lineId = lineNumberNowleft + QString::number(closestLine->matchTimes);
         }
-        else if (m_dataPointData->points[i-1].isVisible && point.isVisible) {
+        else if (i > 0 && m_dataPointData->points[i-1].isVisible && point.isVisible) {
+
             point.lineId = lineNumberNowleft + QString::number(closestLine->matchTimes);
         }
-        else if (m_dataPointData->points[i-1].isVisible && !point.isVisible) {
+        else if (i > 0 && m_dataPointData->points[i-1].isVisible && !point.isVisible) {
+
             closestLine->matchTimes++;  // 设计线的匹配次数++
             batch.relatedLines.append(closestLine->lineName);   //将这段赋的线号记录到架次匹配记录中
         }
         else if (point.isVisible) {
+
             double minDistance;
             for (int j = 0; j < designLinesFile.size(); j++) {
                 DesignLineFile& designLineFile = designLinesFile[j];
@@ -463,11 +464,15 @@ void BatchTab::matchLineNumber()
         }
     }
     syncModel();
+    QMessageBox::information(
+        nullptr,
+        tr("成功"),
+        tr("匹配完成")
+                );
 }
 
 void BatchTab::onChangeLineId(QString originalLineId, QString newLineId)
 {
-    qDebug() << "o:" << originalLineId << " n:"  << newLineId;
     QList<DesignLineFile>& designLinesFile = m_projectModel->getDesignLines();
     Batch& batch = m_projectModel->getBatches()[m_batchIndex];
     if (batch.relatedLines.size()) {

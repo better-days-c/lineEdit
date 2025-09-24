@@ -277,7 +277,7 @@ bool ProjectModel::addDesignLineFile(const QString& filePath) {
     QFile file(filePath);
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QTextStream in(&file);
-        // 文件格式为：Line, X, Y, point, length
+        // 文件格式为：Line, X, Y, ,..., point, length
         // 跳过表头行
         if (!in.atEnd()) in.readLine();
 
@@ -289,7 +289,7 @@ bool ProjectModel::addDesignLineFile(const QString& filePath) {
             // 按空格分割数据
             QStringList parts1 = line1.split(QRegExp("\\s+"), QString::SkipEmptyParts);
             QStringList parts2 = line2.split(QRegExp("\\s+"), QString::SkipEmptyParts);
-            if (parts1.size() == 5) {
+            if (parts1.size() >= 3) {
                 DesignLine dl;
                 dl.lineName = parts1[0].trimmed();
                 dl.x1 = parts1[1].trimmed().toDouble();

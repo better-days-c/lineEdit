@@ -333,12 +333,12 @@ void PlotWidget::highlightLine(QString originalLineId)
     update();
     bool ok;
     QString newLineId = QInputDialog::getText(
-        nullptr,                    // 父窗口（nullptr 为无父窗口）
-        "输入线号",                 // 对话框标题
-        "请输入新线号(示例：L1111)：",         // 标签提示
-        QLineEdit::Normal,         // 输入框类型
-        originalLineId,                        // 默认文本
-        &ok                        // 记录用户是否点击“确定”
+        nullptr,
+        "输入线号",
+        "请输入新线号(示例：L1111)：",
+        QLineEdit::Normal,
+        originalLineId,
+        &ok
     );
     // 检查用户是否点击“确定”并记录输入
     if (ok && !newLineId.isEmpty()) {
