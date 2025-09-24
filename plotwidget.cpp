@@ -261,7 +261,14 @@ void PlotWidget::wheelEvent(QWheelEvent *event)
     } else {
         m_scale /= scaleFactor;
     }
-    m_offset = mousePos - oldWorldPos * m_scale;
+
+    int height = this->height();
+    qreal offset_x = mousePos.x() - oldWorldPos.x() * m_scale;
+    qreal offset_y = height - mousePos.y() - oldWorldPos.y() * m_scale;
+    m_offset = QPointF(offset_x, offset_y);
+
+//    m_offset = mousePos - oldWorldPos * m_scale;
+
 
     // 以鼠标位置为中心缩放
 //    m_offset += mousePos - newScreenPos;
@@ -363,14 +370,20 @@ QPointF PlotWidget::worldToScreen(const QPointF &worldPoint) const
 {
 //    qDebug() << "worldToScreen called.";
 //    qDebug() << worldPoint;
-    return QPointF(worldPoint.x() * m_scale + m_offset.x(),
-                   worldPoint.y() * m_scale + m_offset.y());
+    int height = this->height();
+    qreal x = worldPoint.x() * m_scale + m_offset.x();
+    qreal y = height - (worldPoint.y() * m_scale + m_offset.y());
+    return QPointF(x, y);
 }
 
 QPointF PlotWidget::screenToWorld(const QPointF &screenPoint) const
 {
-    return QPointF((screenPoint.x() - m_offset.x()) / m_scale,
-                   (screenPoint.y() - m_offset.y()) / m_scale);
+//    return QPointF((screenPoint.x() - m_offset.x()) / m_scale,
+//                   (screenPoint.y() - m_offset.y()) / m_scale);
+    int height = this->height();
+    qreal x = (screenPoint.x() - m_offset.x()) / m_scale;
+    qreal y = (height - screenPoint.y() - m_offset.y()) / m_scale;
+    return QPointF(x, y);
 }
 
 //QRectF PlotWidget::screenToWorld(const QRectF &screenRect) const
