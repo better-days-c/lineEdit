@@ -64,6 +64,7 @@ public slots:
     void resetDataPoints();
     void updateSelectedPoint(int index);
     void onChangeLineId(QString originalLineId, QString newLineId);
+    void applyFnCut();
 
 private:
     void setupUI();
@@ -110,6 +111,11 @@ private:
 //    QPushButton *m_invertSelectionBtn;
     QPushButton *m_startSelectingBtn;
     QPushButton *m_endSelectingBtn;
+
+    QSpinBox *m_startFnSpin;
+    QSpinBox *m_endFnSpin;
+    QPushButton *m_applyFnCutBtn;
+
     QPushButton *m_assignLineNumberBtn;
 
     // 状态信息

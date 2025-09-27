@@ -150,10 +150,40 @@ void BatchTab::setupControlPanel()
 //    m_clearSelectionBtn = new QPushButton("清除选择", this);
     m_applySelectionBtn = new QPushButton("应用选区", this);
 //    m_invertSelectionBtn = new QPushButton("反转选择", this);
-    m_assignLineNumberBtn = new QPushButton("匹配线号", this);
-
 //    selectionLayout->addWidget(m_clearSelectionBtn);
     selectionLayout->addWidget(m_applySelectionBtn);
+
+
+    // 通过卡点号来删
+    QVBoxLayout *fnCutLayout = new QVBoxLayout();
+    fnCutLayout->addWidget(new QLabel("按基点号裁剪:", this));
+
+    QHBoxLayout *fnCutSpinButtonLayout = new QHBoxLayout();
+    m_startFnSpin = new QSpinBox(this);
+    m_startFnSpin->setRange(m_dataPointData->points[0].fn,
+            m_dataPointData->points[m_dataPointData->points.size()-1].fn);
+    m_startFnSpin->setSingleStep(10.0);
+    m_startFnSpin->setValue(m_dataPointData->points[0].fn);
+    fnCutSpinButtonLayout->addWidget(m_startFnSpin);
+
+    m_endFnSpin = new QSpinBox(this);
+    m_endFnSpin->setRange(m_dataPointData->points[0].fn,
+            m_dataPointData->points[m_dataPointData->points.size()-1].fn);
+    m_endFnSpin->setSingleStep(10.0);
+    m_endFnSpin->setValue(m_dataPointData->points[m_dataPointData->points.size()-1].fn);
+    fnCutSpinButtonLayout->addWidget(m_endFnSpin);
+
+    m_applyFnCutBtn = new QPushButton("裁剪", this);
+    fnCutSpinButtonLayout->addWidget(m_applyFnCutBtn);
+
+    fnCutLayout->addLayout(fnCutSpinButtonLayout);
+
+    selectionLayout->addLayout(fnCutLayout);
+
+    connect(m_applyFnCutBtn, &QPushButton::clicked, this, &BatchTab::applyFnCut);
+
+    m_assignLineNumberBtn = new QPushButton("匹配线号", this);
+
 //    selectionLayout->addWidget(m_invertSelectionBtn);
     selectionLayout->addWidget(m_assignLineNumberBtn);
 
@@ -162,8 +192,6 @@ void BatchTab::setupControlPanel()
     connect(m_startSelectingBtn, &QPushButton::clicked, this, &BatchTab::startSelecting);
     connect(m_endSelectingBtn, &QPushButton::clicked, this, &BatchTab::endSelecting);
     connect(m_assignLineNumberBtn, &QPushButton::clicked, this, &BatchTab::matchLineNumber);
-
-    // 通过卡点号来删
 
 
     // 状态信息
@@ -187,6 +215,7 @@ void BatchTab::setupControlPanel()
     layout->addWidget(m_selectionControlGroup);
     layout->addWidget(statusGroup);
     layout->addStretch();
+
 }
 
 void BatchTab::setProjectModel(ProjectModel *model) {
@@ -269,6 +298,22 @@ void BatchTab::onAltThresholdChanged(double value)
         QMessageBox::warning(this, "错误", "无效的高度阈值设置！");
 }
 
+void BatchTab::applyFnCut()
+{
+    if (m_startFnSpin->value() < m_endFnSpin->value()) {
+        for (DataPoint &point: m_dataPointData->points) {
+            if (point.fn >= m_startFnSpin->value())
+                point.isVisible = false;
+            if (point.fn >= m_endFnSpin->value())
+                break;
+        }
+    }
+    else
+        QMessageBox::warning(this, "错误", "无效的基点号范围设置！");
+    m_plotWidget->m_pointsDirty = true;
+    m_plotWidget->update();
+    syncModel();
+}
 //void DatFileTab::deleteLowQualityPoints()
 //{
 //    m_datFileData->hideByOffset(m_datFileData->lowAltThreshold);
@@ -316,6 +361,32 @@ void BatchTab::resetDataPoints()
     }
     m_plotWidget->m_pointsDirty = true;
     m_plotWidget->update();
+    syncModel();
+
+    QList<DesignLineFile>& designLinesFile = m_projectModel->getDesignLines();
+    if (batch.relatedLines.size()) {
+        for (DesignLineFile& designLineFile : designLinesFile) {
+            QList<DesignLine>& data = designLineFile.data;
+            for (DesignLine& line : data){
+                QString designLineName = line.lineName;
+//                if (batch.relatedLines.contains(line.lineName)){
+//                    line.matchTimes--;
+//                    batch.relatedLines.removeOne()
+                for (QString& relatedLine : batch.relatedLines) {
+                    if (relatedLine.left(relatedLine.length()-1)
+                            == designLineName.left(designLineName.length()-1)) {
+                        line.matchTimes--;
+                        batch.relatedLines.removeOne(relatedLine);
+                    }
+                }
+            }
+        }
+    }
+
+    for (DataPoint& point : m_dataPointData->points) {
+        point.lineId = "0";
+    }
+
     syncModel();
 }
 
