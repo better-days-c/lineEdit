@@ -186,13 +186,10 @@ void PlotWidget::mousePressEvent(QMouseEvent *event)
     }
     else {
         if (event->button() == Qt::LeftButton) {
-            int pointIndex = findPointAtPosition(event->pos());
-
-            if (pointIndex >= 0) {
-                emit pointClicked(pointIndex);
-            } else {
-//                clearStatusBar();
-            }
+            pressPos = event->pos(); // 记录按下位置
+            pressTime.start(); // 记录按下时间
+            isClickPending = true; // 标记可能为单击
+            isDragging = false; // 重置拖动状态
         }
     }
 
@@ -210,6 +207,29 @@ void PlotWidget::mouseMoveEvent(QMouseEvent *event)
         m_currentPoint = event->pos();
         update();
     }
+    else {
+        if (event->buttons() & Qt::LeftButton) {
+            // 检查是否进入拖动状态
+            if (isClickPending) {
+                double distance = std::hypot(event->pos().x() - pressPos.x(), event->pos().y() - pressPos.y());
+                if (distance > dragThreshold || pressTime.elapsed() > clickTimeThreshold) {
+                    isDragging = true;
+                    isClickPending = false; // 不再视为单击
+                }
+            }
+
+            // 执行拖动
+            if (isDragging) {
+                QPointF delta = event->pos() - pressPos;
+//                m_offset += delta; // 调整偏移，考虑缩放
+                m_offset.setX(m_offset.x() + delta.x());
+                m_offset.setY(m_offset.y() - delta.y());
+                pressPos = event->pos(); // 更新起始位置
+                m_pointsDirty = true;
+                update(); // 重绘
+            }
+        }
+    }
 
 
     QWidget::mouseMoveEvent(event);
@@ -217,34 +237,15 @@ void PlotWidget::mouseMoveEvent(QMouseEvent *event)
 
 void PlotWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-//    if (event->button() == Qt::LeftButton && m_isSelecting) {
-//        m_isSelecting = false;
-
-//        QRect selectionRect = m_rubberBand->geometry();
-//        m_rubberBand->hide();
-
-//        if (selectionRect.width() > 5 && selectionRect.height() > 5) {
-//            QRectF worldSelection = screenToWorld(QRectF(selectionRect));
-
-//            switch (m_selectionMode) {
-//            case Normal:
-//                m_selectionRegions.clear();
-//                m_selectionRegions.append(worldSelection);
-//                break;
-//            case Add:
-//                m_selectionRegions.append(worldSelection);
-//                break;
-//            case Subtract:
-//                /// 从现有选区中减去新选区（简化实现，实际应该做布尔运算）
-//                /// TODO: 实现更复杂的选区运算
-//                break;
-//            }
-
-//            emit selectionChanged();
-//            update();
-//        }
-//    }
-
+    if (event->button() == Qt::LeftButton) {
+        if (isClickPending && pressTime.elapsed() <= clickTimeThreshold) {
+            // 视为单击，执行原有单击功能
+            int pointIndex = findPointAtPosition(event->pos());
+            if (pointIndex >= 0)    emit pointClicked(pointIndex);
+        }
+        isDragging = false;
+        isClickPending = false;
+    }
     QWidget::mouseReleaseEvent(event);
 }
 

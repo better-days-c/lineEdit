@@ -112,6 +112,13 @@ private:
     QPolygonF m_selectionPolygon_screen;    //完成的多边形选区
     QPolygonF m_selectionPolygon_world;
 
+    bool isDragging;
+    QPoint pressPos;
+    QTime pressTime;
+    bool isClickPending;
+    static constexpr double dragThreshold = 5.0; // 拖动距离阈值（像素）
+    static constexpr int clickTimeThreshold = 200; // 单击时间阈值（毫秒）
+
     QPixmap m_pointsCache;      // 缓存数据点
 
     QStatusBar* m_statusBar = nullptr;
